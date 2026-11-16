@@ -290,3 +290,15 @@ table.results th, table.results td { padding: 6px 8px; border-bottom: 1px solid 
 
 .stage-body > .ans-grid { width: min(1300px, 100%); }
 .stage-body.layout-media-left > .ans-grid, .stage-body.layout-media-right > .ans-grid { grid-template-columns: 1fr; }
+
+/* ================= Son seulement (blind test) ================= */
+.audio-only { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 40px; background: var(--card); color: var(--fg); border-radius: calc(20px * var(--r, 1)); }
+.audio-only .eq { display: flex; align-items: flex-end; gap: 8px; height: 110px; }
+.audio-only .eq i { width: 18px; border-radius: 6px; height: 30%; animation: eq 0.9s ease-in-out infinite alternate; }
+.audio-only.is-paused .eq i { animation-play-state: paused; opacity: .5; }
+.audio-label { font-size: 1.5em; font-weight: 800; font-family: var(--title-font, inherit); }
+@keyframes eq { 0% { height: 15%; } 50% { height: 90%; } 100% { height: 40%; } }
+.hidden-player { position: fixed; right: 0; bottom: 0; width: 220px; height: 220px; opacity: 0.01; pointer-events: none; z-index: -1; overflow: hidden; }
+.hidden-player .stage-video { width: 220px; height: 220px; }
+.media-ctrl { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.video-wrap { display: contents; }

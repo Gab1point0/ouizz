@@ -10,7 +10,17 @@ export type QType =
   | 'slide';
 
 /** Image : data URL (fichier importé, compressé) ou lien https. Vidéo : lien YouTube ou fichier https. */
-export interface Media { kind: 'image' | 'video'; src: string }
+export interface Media {
+  kind: 'image' | 'video';
+  src: string;
+  /** vidéo : son seulement (vidéo cachée), pour les blind tests */
+  audioOnly?: boolean;
+  /** son seulement : dévoiler la vidéo au moment de la réponse */
+  revealVideo?: boolean;
+  /** vidéo : début et fin (secondes) */
+  start?: number;
+  end?: number;
+}
 
 export interface Choice { id: string; text: string; image?: string; correct?: boolean }
 export interface Item { id: string; text: string }

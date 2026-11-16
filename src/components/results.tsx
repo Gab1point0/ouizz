@@ -5,7 +5,8 @@ import type { PubQuestion } from '../net/protocol';
 import type { Question } from '../types';
 import { normalize, parseBlanks } from '../util';
 import { labelFor, tile, TileLabel, useLook } from '../style';
-import { answerColor, MediaView } from './common';
+import { answerColor } from './common';
+import { MediaView, type PlayerControl } from './MediaPlayer';
 
 interface Props { game: HostGame; q: Question; pq: PubQuestion; reveal: boolean }
 
@@ -363,7 +364,7 @@ export function StageAnswers({ q, pq }: { q: Question; pq: PubQuestion }) {
   return null;
 }
 
-export function StageMedia({ q }: { q: Question }) {
+export function StageMedia({ q, control }: { q: Question; control?: PlayerControl }) {
   if (!q.media) return null;
-  return <MediaView media={q.media} />;
+  return <MediaView media={q.media} control={control} />;
 }

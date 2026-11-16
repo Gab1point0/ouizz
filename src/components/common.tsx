@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import QRCode from 'qrcode';
 import { useLook } from '../style';
-import { youtubeEmbed } from '../util';
 
 // ---------- Routage par « # » (compatible GitHub Pages) ----------
 export function useHashRoute(): { path: string[]; query: URLSearchParams } {
@@ -73,14 +72,8 @@ export function QR({ text, size = 200 }: { text: string; size?: number }) {
   return <div className="qr" style={{ width: size + 20, height: size + 20 }} dangerouslySetInnerHTML={{ __html: svg.replace('<svg', `<svg width="${size}" height="${size}"`) }} />;
 }
 
-// ---------- Média (image ou vidéo YouTube / fichier) ----------
-export function MediaView({ media, className = 'stage-media' }: { media?: { kind: 'image' | 'video'; src: string }; className?: string }) {
-  if (!media?.src) return null;
-  if (media.kind === 'image') return <img className={className} src={media.src} alt="" />;
-  const yt = youtubeEmbed(media.src);
-  if (yt) return <iframe className="stage-video" src={yt} allow="autoplay; encrypted-media; fullscreen" allowFullScreen title="vidéo" />;
-  return <video className="stage-video" src={media.src} controls autoPlay />;
-}
+// ---------- Média : voir MediaPlayer.tsx ----------
+export { MediaView } from './MediaPlayer';
 
 // ---------- Confettis ----------
 export function Confetti({ count = 120 }: { count?: number }) {

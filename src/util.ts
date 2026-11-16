@@ -93,12 +93,10 @@ export function pickFile(accept: string): Promise<File | null> {
   });
 }
 
-/** Lien YouTube -> lien d'intégration (sinon null) */
-export function youtubeEmbed(url: string): string | null {
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
-  if (!m) return null;
-  const t = url.match(/[?&]t=(\d+)/);
-  return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0${t ? `&start=${t[1]}` : ''}`;
+/** Identifiant d'une vidéo YouTube (liens youtube.com, youtu.be, shorts, live, music.youtube.com), sinon null */
+export function youtubeId(url: string): string | null {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/);
+  return m ? m[1] : null;
 }
 
 /** Analyse le texte à trous : « La [France|la France] a pour capitale [Paris]. » */

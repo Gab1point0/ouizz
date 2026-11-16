@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { appUrl, Confetti, go, QR, ReactionsLayer, Timer, type FloatingReaction } from '../components/common';
 import { qlookOf, resolveLook, Styled } from '../style';
 import { Results, StageAnswers, StageMedia } from '../components/results';
+import { MediaView } from '../components/MediaPlayer';
 import { clearSavedGame, HostGame, loadSavedGame, newPin, type HostSnapshot } from '../game/host';
 import { openTransport } from '../net/transport';
 import { isScored, QT, questionProblems } from '../qtypes';
@@ -156,6 +157,17 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
 
   useEffect(() => { setShowAnswer(false); }, [s.idx]);
 
+  // ---- lecture des vidéos / blind test ----
+  const [userPaused, setUserPaused] = useState(false);
+  const [restartKey, setRestartKey] = useState(0);
+  const [showVideo, setShowVideo] = useState(false);
+  useEffect(() => { setUserPaused(false); setShowVideo(false); }, [s.idx]);
+  const hasVideo = q?.media?.kind === 'video';
+  const buzzing = q?.type === 'buzzer' && (s.buzz.queue.length > 0 || !!s.buzz.winner);
+  // pause : bouton de l'animateur, pause de la partie, ou quelqu'un a buzzé (reprend si sa réponse est fausse)
+  const mediaPaused = hasVideo ? userPaused || s.pausedLeft !== undefined || buzzing : undefined;
+  const mediaControl = { paused: mediaPaused, restartKey, reveal: showVideo };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'INPUT') return;
@@ -181,6 +193,13 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
       <span className="chip">Code {s.pin}</span>
       <button className="btn btn-sm" onClick={toggleFullscreen} title="Plein écran (F)">⛶</button>
       <button className="btn btn-sm" onClick={() => { setSoundEnabled(!sound); setSound(!sound); }}>{sound ? '🔊' : '🔇'}</button>
+      {s.phase === 'question' && hasVideo && (
+        <>
+          <button className="btn btn-sm" onClick={() => setUserPaused((x) => !x)}>{mediaPaused ? '▶ Son' : '⏸ Son'}</button>
+          <button className="btn btn-sm" onClick={() => { setUserPaused(false); setRestartKey((k) => k + 1); }}>↺ Rejouer l’extrait</button>
+          {q?.media?.audioOnly && <button className="btn btn-sm" onClick={() => setShowVideo((x) => !x)}>{showVideo ? '🙈 Cacher la vidéo' : '👁 Montrer la vidéo'}</button>}
+        </>
+      )}
       {(s.phase === 'question' || s.phase === 'ready') && q?.type !== 'slide' && (
         <>
           {(s.endsAt > 0 || s.pausedLeft !== undefined) && <button className="btn btn-sm" onClick={() => game.togglePause()}>{s.pausedLeft !== undefined ? '▶ Reprendre' : '⏸ Pause'}</button>}
@@ -266,7 +285,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
             </div>
             {(q.title || q.type !== 'slide') && <div className="stage-title anim-down">{q.title}</div>}
             <div className={`stage-body layout-${look.layout}`}>
-              <StageMedia q={q} />
+              <StageMedia q={q} control={mediaControl} />
               {q.type === 'slide' && q.body && <div className="card anim-slide" style={{ fontSize: '1.5em', whiteSpace: 'pre-wrap', maxWidth: 1100 }}>{q.body}</div>}
               {q.type === 'buzzer' ? (
                 <BuzzPanel game={game} showAnswer={showAnswer} onToggle={() => setShowAnswer((x) => !x)} />
@@ -295,6 +314,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
             </div>
             <div className="stage-title">{q.title}</div>
             <div className="stage-body" style={{ flexDirection: 'column' }}>
+              {q.media?.kind === 'video' && q.media.audioOnly && q.media.revealVideo && <MediaView media={{ ...q.media, audioOnly: false }} />}
               <Results game={game} q={q} pq={pq} reveal />
               {q.note && <div className="card anim-slide" style={{ maxWidth: 900 }}>💡 {q.note}</div>}
             </div>

@@ -182,7 +182,8 @@ function MediaEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
     }}>
       {q.media ? (
         <div className="col" style={{ alignItems: 'center' }}>
-          <MediaView media={q.media} className="" />
+          <MediaView media={{ ...q.media, audioOnly: false }} className="" autoplay={false} />
+          {q.media.kind === 'video' && <VideoOptions media={q.media} set={set} />}
           <button className="btn btn-sm" onClick={() => set(undefined)}>Retirer le média</button>
         </div>
       ) : (
@@ -196,6 +197,41 @@ function MediaEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
           <div className="small muted">Astuce : tu peux aussi coller une image (Ctrl+V) ici.</div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** « 1:23 » ou « 83 » -> 83 secondes */
+const parseTime = (v: string): number | undefined => {
+  const t = v.trim();
+  if (!t) return undefined;
+  const parts = t.split(':').map(Number);
+  if (parts.some((n) => Number.isNaN(n))) return undefined;
+  return parts.reduce((a, n) => a * 60 + n, 0);
+};
+const fmtTime = (n?: number) => (n === undefined ? '' : `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, '0')}`);
+
+function TimeInput({ value, onChange, placeholder }: { value?: number; onChange: (v?: number) => void; placeholder: string }) {
+  const [txt, setTxt] = useState(fmtTime(value));
+  useEffect(() => { setTxt(fmtTime(value)); }, [value]);
+  return <input className="input" style={{ width: 110 }} placeholder={placeholder} value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={() => onChange(parseTime(txt))} onKeyDown={(e) => { if (e.key === 'Enter') onChange(parseTime(txt)); }} />;
+}
+
+/** Options d'une vidéo : son seulement (blind test), dévoilement, extrait (début / fin). */
+function VideoOptions({ media, set }: { media: Media; set: (m?: Media) => void }) {
+  const upd = (p: Partial<Media>) => set({ ...media, ...p });
+  return (
+    <div className="card col" style={{ width: '100%', textAlign: 'left', gap: 8 }}>
+      <label className="check"><input type="checkbox" checked={!!media.audioOnly} onChange={(e) => upd({ audioOnly: e.target.checked, revealVideo: e.target.checked ? media.revealVideo ?? true : media.revealVideo })} /> <b>🎧 Son seulement</b> : la vidéo est cachée, on n’entend que le son (blind test)</label>
+      {media.audioOnly && <label className="check"><input type="checkbox" checked={media.revealVideo !== false} onChange={(e) => upd({ revealVideo: e.target.checked })} /> Montrer la vidéo au moment de la réponse</label>}
+      <div className="row">
+        <span className="small">Extrait : de</span>
+        <TimeInput value={media.start} onChange={(v) => upd({ start: v })} placeholder="0:00" />
+        <span className="small">à</span>
+        <TimeInput value={media.end} onChange={(v) => upd({ end: v })} placeholder="fin" />
+        <span className="small muted">(minutes:secondes)</span>
+      </div>
+      {media.audioOnly && <div className="small muted">💡 Blind test : choisis le type « Buzzer (oral) » (le son se coupe dès que quelqu’un buzze et reprend si sa réponse est fausse), ou « Réponse à taper » / « Quiz » pour que tout le monde réponde sur son téléphone. Pendant la partie, tu as aussi les boutons ⏸ Son, ↺ Rejouer l’extrait et 👁 Montrer la vidéo.</div>}
     </div>
   );
 }
