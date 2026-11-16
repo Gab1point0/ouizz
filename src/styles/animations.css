@@ -13,6 +13,15 @@
 @keyframes drift { from { transform: translateY(0); } to { transform: translateY(-120vh); } }
 @keyframes twinkle { 0%,100% { opacity: .2; } 50% { opacity: 1; } }
 @keyframes wave { from { background-position-x: 0; } to { background-position-x: 1200px; } }
+@keyframes snowFall { 0% { transform: translate(0, -10vh); } 50% { transform: translate(30px, 50vh); } 100% { transform: translate(-10px, 110vh); } }
+@keyframes glyphFall { 0% { transform: translateY(-10vh) rotate(-15deg); } 50% { transform: translate(25px, 50vh) rotate(15deg); } 100% { transform: translate(-15px, 110vh) rotate(-10deg); } }
+@keyframes bokeh { from { transform: translate(0, 0) scale(1); } to { transform: translate(60px, -40px) scale(1.25); } }
+@keyframes gridMove { from { background-position: 0 0; } to { background-position: 0 60px; } }
+@keyframes trSlide { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes trZoom { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes trFlip { from { transform: perspective(1200px) rotateY(-75deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes trBounce { 0% { transform: translateY(-60px); opacity: 0; } 60% { transform: translateY(10px); opacity: 1; } 80% { transform: translateY(-4px); } 100% { transform: none; } }
+@keyframes trSwing { 0% { transform: rotate(-6deg) translateY(-20px); opacity: 0; } 60% { transform: rotate(3deg); opacity: 1; } 100% { transform: none; } }
 @keyframes rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 
 .anim-pop { animation: pop .45s cubic-bezier(.2,.9,.3,1.3) both; }
@@ -30,8 +39,23 @@
 .confetti { position: fixed; top: 0; width: 10px; height: 16px; border-radius: 2px; animation: confettiFall linear forwards; z-index: 60; pointer-events: none; }
 .spinner { width: 28px; height: 28px; border: 4px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
 
+/* ---------- transitions entre écrans (classe sur le conteneur qui change) ---------- */
+.tr-fade { animation: fadeIn .45s ease both; }
+.tr-slide { animation: trSlide .45s cubic-bezier(.2,.8,.2,1) both; }
+.tr-zoom { animation: trZoom .45s cubic-bezier(.2,.8,.2,1) both; }
+.tr-flip { animation: trFlip .6s cubic-bezier(.2,.8,.2,1) both; }
+.tr-bounce { animation: trBounce .65s ease both; }
+.tr-swing { animation: trSwing .7s ease both; transform-origin: top center; }
+
 /* ---------- décors d'arrière-plan (thème -> deco) ---------- */
 .deco { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.deco-snow i { position: absolute; top: -12px; border-radius: 50%; background: #fff; animation: snowFall linear infinite; }
+.deco-glyph i { position: absolute; top: -50px; font-style: normal; opacity: .55; animation: glyphFall linear infinite; }
+.deco-bokeh i { position: absolute; border-radius: 50%; opacity: .16; filter: blur(30px); animation: bokeh ease-in-out infinite alternate; }
+.deco-sparkles i { position: absolute; font-style: normal; animation: twinkle ease-in-out infinite; }
+.deco-grid div { position: absolute; left: -50%; right: -50%; bottom: -10%; height: 60%; transform: perspective(400px) rotateX(62deg); transform-origin: bottom;
+  background-image: linear-gradient(color-mix(in srgb, var(--accent) 45%, transparent) 2px, transparent 2px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 45%, transparent) 2px, transparent 2px);
+  background-size: 60px 60px; animation: gridMove 3s linear infinite; mask-image: linear-gradient(transparent, #000 60%); -webkit-mask-image: linear-gradient(transparent, #000 60%); }
 .deco-bubbles i { position: absolute; bottom: -60px; border-radius: 50%; background: rgba(255,255,255,.08); animation: drift linear infinite; }
 .deco-stars i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; animation: twinkle ease-in-out infinite; }
 .deco-confetti i { position: absolute; top: -20px; width: 8px; height: 12px; border-radius: 2px; opacity: .35; animation: confettiFall linear infinite; }

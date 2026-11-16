@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import QRCode from 'qrcode';
-import { themeById } from '../themes';
+import { useLook } from '../style';
 import { youtubeEmbed } from '../util';
 
 // ---------- Routage par « # » (compatible GitHub Pages) ----------
@@ -23,31 +23,10 @@ export const go = (path: string) => { location.hash = path.startsWith('#') ? pat
 /** Adresse publique de l'application (sans le #) */
 export const appUrl = () => location.href.split('#')[0].replace(/index\.html$/, '');
 
-// ---------- Décor animé du thème ----------
-export function Deco({ theme }: { theme?: string }) {
-  const t = themeById(theme);
-  const items = useMemo(() => Array.from({ length: t.deco === 'stars' ? 60 : 18 }, (_, i) => i), [t.deco]);
-  if (!t.deco || t.deco === 'none') return null;
-  if (t.deco === 'waves') return <div className="deco deco-waves" />;
-  const colors = ['var(--a1)', 'var(--a2)', 'var(--a3)', 'var(--a4)', 'var(--a5)', 'var(--a6)'];
-  return (
-    <div className={`deco deco-${t.deco}`}>
-      {items.map((i) => {
-        const r = (n: number) => { const x = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453; return x - Math.floor(x); };
-        const style: CSSProperties =
-          t.deco === 'bubbles'
-            ? { left: `${r(1) * 100}%`, width: 20 + r(2) * 60, height: 20 + r(2) * 60, animationDuration: `${12 + r(3) * 18}s`, animationDelay: `${-r(4) * 20}s` }
-            : t.deco === 'stars'
-              ? { left: `${r(1) * 100}%`, top: `${r(2) * 100}%`, animationDuration: `${2 + r(3) * 4}s`, animationDelay: `${-r(4) * 5}s` }
-              : { left: `${r(1) * 100}%`, background: colors[i % 6], animationDuration: `${10 + r(3) * 14}s`, animationDelay: `${-r(4) * 20}s` };
-        return <i key={i} style={style} />;
-      })}
-    </div>
-  );
-}
-
-// ---------- Chrono circulaire ----------
-export function Timer({ endsAt, total, paused, size = 96 }: { endsAt: number; total: number; paused?: number; size?: number }) {
+// ---------- Chrono (cercle, barre, grand nombre ou caché, selon l'apparence) ----------
+export function Timer({ endsAt, total, paused, size = 96, variant }: { endsAt: number; total: number; paused?: number; size?: number; variant?: 'circle' | 'bar' | 'number' | 'hidden' }) {
+  const look = useLook();
+  const kind = variant ?? look.timerStyle;
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 100);
@@ -55,10 +34,13 @@ export function Timer({ endsAt, total, paused, size = 96 }: { endsAt: number; to
   }, []);
   const left = paused ?? Math.max(0, endsAt - now);
   const frac = total > 0 ? Math.min(1, left / total) : 0;
-  const r = size / 2 - 7;
-  const c = 2 * Math.PI * r;
   const sec = Math.ceil(left / 1000);
   const color = sec <= 5 ? 'var(--a1)' : 'var(--accent)';
+  if (kind === 'hidden') return null;
+  if (kind === 'bar') return <div className="timer-bar"><div style={{ width: `${frac * 100}%`, background: color }} /></div>;
+  if (kind === 'number') return <div className={`timer-number ${sec <= 5 && !paused ? 'anim-pulse' : ''}`} style={{ color }}>{paused !== undefined ? '⏸' : sec}</div>;
+  const r = size / 2 - 7;
+  const c = 2 * Math.PI * r;
   return (
     <div className={`timer ${sec <= 5 && !paused ? 'anim-pulse' : ''}`} style={{ width: size, height: size }}>
       <svg width={size} height={size}>

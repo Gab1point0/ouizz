@@ -7,6 +7,7 @@ import { QT } from '../qtypes';
 import { makeSampleQuiz } from '../sampleQuiz';
 import { deleteQuiz, deleteReport, duplicateQuiz, exportQuizzes, importQuizzes, listQuizzes, listReports, saveQuiz, type Report } from '../storage';
 import { themeStyle } from '../themes';
+import { resolveLook } from '../style';
 import type { Quiz } from '../types';
 import { download, pickFile, uid } from '../util';
 
@@ -80,7 +81,7 @@ export function LibraryPage() {
             const cover = q.cover?.src ?? q.questions.find((x) => x.media?.kind === 'image')?.media?.src;
             const types = [...new Set(q.questions.map((x) => QT[x.type]?.icon))].slice(0, 8).join(' ');
             return (
-              <div key={q.id} className="card quiz-card anim-pop" style={themeStyle(q.theme)}>
+              <div key={q.id} className="card quiz-card anim-pop" style={{ ...resolveLook(q.theme, q.style).vars, fontFamily: 'var(--font)' }}>
                 <div className="quiz-cover" style={{ background: 'var(--bg)' }}>{cover ? <img src={cover} alt="" /> : '❓'}</div>
                 <b style={{ color: 'var(--fg)' }}>{q.title || 'Sans titre'}</b>
                 <div className="small muted">{q.questions.length} question{q.questions.length > 1 ? 's' : ''} · {types}</div>

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PubQuestion } from '../net/protocol';
 import type { AnswerPayload } from '../types';
-import { LETTERS } from '../util';
+import { tile, TileLabel } from '../style';
 import { answerColor } from './common';
 
 interface Props {
@@ -56,8 +56,8 @@ function ChoiceInput({ q, media, showText, onSubmit }: Props) {
       {q.multi && <div className="center muted small">Plusieurs réponses possibles</div>}
       <div className={`phone-ans ${list ? 'list' : ''} ${answers.length <= 2 ? 'full' : ''}`}>
         {answers.map((a, i) => (
-          <button key={a.id} className={`ans anim-pop d${i + 1} ${sel.includes(a.id) ? 'sel' : ''}`} style={{ background: answerColor(i) }} onClick={() => click(a.id)}>
-            <span className="letter">{LETTERS[i]}</span>
+          <button key={a.id} className={`ans anim-pop d${i + 1} ${sel.includes(a.id) ? 'sel' : ''}`} style={tile(i)} onClick={() => click(a.id)}>
+            <TileLabel i={i} />
             {a.imageKey && media[a.imageKey] && <img src={media[a.imageKey]} alt="" />}
             {showText && a.text && <span>{a.text}</span>}
           </button>
@@ -71,8 +71,8 @@ function ChoiceInput({ q, media, showText, onSubmit }: Props) {
 function TrueFalseInput({ onSubmit }: Props) {
   return (
     <div className="phone-ans full">
-      <button className="ans anim-pop" style={{ background: 'var(--a2)', fontSize: '1.6em' }} onClick={() => onSubmit(true)}>✔ Vrai</button>
-      <button className="ans anim-pop d1" style={{ background: 'var(--a1)', fontSize: '1.6em' }} onClick={() => onSubmit(false)}>✘ Faux</button>
+      <button className="ans anim-pop" style={{ ...tile(1), fontSize: '1.6em' }} onClick={() => onSubmit(true)}>✔ Vrai</button>
+      <button className="ans anim-pop d1" style={{ ...tile(0), fontSize: '1.6em' }} onClick={() => onSubmit(false)}>✘ Faux</button>
     </div>
   );
 }

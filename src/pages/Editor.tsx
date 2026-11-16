@@ -4,15 +4,18 @@ import { answerColor, go, MediaView, Modal } from '../components/common';
 import { fileToDataUrl } from '../image';
 import { changeType, newQuestion, QT, QTYPES, questionProblems } from '../qtypes';
 import { getQuiz, saveQuiz } from '../storage';
-import { THEMES, themeStyle } from '../themes';
-import type { Media, QType, Question, Quiz } from '../types';
-import { LETTERS, parseBlanks, pickFile, uid } from '../util';
+import { themeStyle } from '../themes';
+import { AppearanceEditor, ColorField } from '../components/Appearance';
+import { DECOS, LookProvider, qlookOf, resolveLook, tile, TileLabel, TRANSITIONS } from '../style';
+import type { DecoId, Media, QType, Question, QuestionLook, Quiz, TransitionId } from '../types';
+import { parseBlanks, pickFile, uid } from '../util';
 
 export function EditorPage({ quizId }: { quizId: string }) {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [sel, setSel] = useState(0);
   const [saved, setSaved] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [lookOpen, setLookOpen] = useState(false);
   const timer = useRef(0);
 
   useEffect(() => { getQuiz(quizId).then((q) => setQuiz(q ?? null)); }, [quizId]);
@@ -64,14 +67,19 @@ export function EditorPage({ quizId }: { quizId: string }) {
     setSel(Math.max(0, sel - 1));
   };
 
+  const applyLookToAll = (look?: QuestionLook) => {
+    if (!confirm('Appliquer l’apparence de cette question (fond, mise en page, décor…) à toutes les questions ?')) return;
+    update((z) => ({ ...z, questions: z.questions.map((x) => ({ ...x, look: look ? structuredClone(look) : undefined, bg: undefined })) }));
+  };
+  const look = resolveLook(quiz.theme, quiz.style, q ? qlookOf(q) : undefined);
+
   return (
-    <div className="app" style={themeStyle(quiz.theme)}>
+    <LookProvider look={look}>
+    <div className={`app editor-root ${look.cls}`} style={{ ...look.vars, ['--q-font' as string]: (look.vars as Record<string, string>)['--font'], ['--q-title-font' as string]: (look.vars as Record<string, string>)['--title-font'] === 'var(--font)' ? (look.vars as Record<string, string>)['--font'] : (look.vars as Record<string, string>)['--title-font'], ['--font' as string]: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", ['--title-font' as string]: 'inherit' }}>
       <div className="toolbar">
         <button className="btn btn-ghost" onClick={async () => { clearTimeout(timer.current); await saveQuiz(quiz); go('/host'); }}>← Mes quiz</button>
         <input className="input" style={{ maxWidth: 420, fontWeight: 700 }} placeholder="Titre du quiz" value={quiz.title} onChange={(e) => update((z) => ({ ...z, title: e.target.value }))} />
-        <select className="select" style={{ width: 160 }} value={quiz.theme} onChange={(e) => update((z) => ({ ...z, theme: e.target.value }))} title="Thème">
-          {THEMES.map((t) => <option key={t.id} value={t.id}>🎨 {t.name}</option>)}
-        </select>
+        <button className="btn" onClick={() => setLookOpen(true)}>🎨 Apparence</button>
         <span className="spacer" />
         <span className="small muted">{saved ? '✓ Enregistré' : 'Enregistrement…'}</span>
         <button className="btn btn-primary" disabled={!quiz.questions.length} onClick={async () => { clearTimeout(timer.current); await saveQuiz(quiz); go(`/run/${quiz.id}`); }}>▶ Jouer</button>
@@ -96,7 +104,7 @@ export function EditorPage({ quizId }: { quizId: string }) {
 
         {q ? (
           <>
-            <div className="ed-main" style={q.bg ? { background: q.bg } : undefined}>
+            <div className="ed-main" style={look.backdrop ? { background: look.backdrop.background, backgroundColor: 'var(--bg)' } : undefined}>
               <div className="row">
                 <span className="chip">{QT[q.type].icon} {QT[q.type].label}</span>
                 <span className="spacer" />
@@ -110,7 +118,7 @@ export function EditorPage({ quizId }: { quizId: string }) {
               <TypeEditor q={q} setQ={setQ} />
               {questionProblems(q).map((p) => <div key={p} className="problems">⚠ {p}</div>)}
             </div>
-            <SidePanel q={q} setQ={setQ} />
+            <SidePanel q={q} setQ={setQ} onAll={applyLookToAll} />
           </>
         ) : (
           <div className="ed-main center col" style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -121,7 +129,9 @@ export function EditorPage({ quizId }: { quizId: string }) {
         )}
       </div>
       {adding && <TypePicker onPick={addQuestion} onClose={() => setAdding(false)} />}
+      {lookOpen && <AppearanceEditor quiz={quiz} question={q} onChange={(theme, style) => update((z) => ({ ...z, theme, style }))} onClose={() => setLookOpen(false)} />}
     </div>
+    </LookProvider>
   );
 }
 
@@ -226,7 +236,7 @@ function TypeEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
       return (
         <div className="ed-ans">
           {[true, false].map((v) => (
-            <button key={String(v)} className={`ans ${q.correctBool === v ? 'sel' : 'dim'}`} style={{ background: v ? 'var(--a2)' : 'var(--a1)', justifyContent: 'center', cursor: 'pointer', fontSize: '1.3em' }} onClick={() => setQ((x) => ({ ...x, correctBool: v }))}>
+            <button key={String(v)} className={`ans ${q.correctBool === v ? 'sel' : 'dim'}`} style={{ ...tile(v ? 1 : 0), justifyContent: 'center', cursor: 'pointer', fontSize: '1.3em' }} onClick={() => setQ((x) => ({ ...x, correctBool: v }))}>
               {v ? '✔ Vrai' : '✘ Faux'} {q.correctBool === v && ' — bonne réponse'}
             </button>
           ))}
@@ -370,9 +380,9 @@ function ChoiceEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
     <>
       <div className="ed-ans">
         {answers.map((a, i) => (
-          <div key={a.id} className="ans" style={{ background: answerColor(i), flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+          <div key={a.id} className="ans" style={{ ...tile(i), flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
             <div className="row" style={{ flexWrap: 'nowrap' }}>
-              <span className="letter">{LETTERS[i]}</span>
+              <TileLabel i={i} />
               <input type="text" value={a.text} placeholder={`Réponse ${i + 1}${i >= 2 ? ' (facultatif)' : ''}`} onChange={(e) => set(answers.map((x) => (x.id === a.id ? { ...x, text: e.target.value } : x)))} />
             </div>
             {a.image && <img src={a.image} alt="" style={{ width: '100%', maxHeight: 120, objectFit: 'contain' }} />}
@@ -431,7 +441,7 @@ function ItemList({ q, setQ, label }: { q: Question; setQ: SetQ; label: string }
   );
 }
 
-function SidePanel({ q, setQ }: { q: Question; setQ: SetQ }) {
+function SidePanel({ q, setQ, onAll }: { q: Question; setQ: SetQ; onAll: (l?: QuestionLook) => void }) {
   const info = QT[q.type];
   return (
     <div className="ed-side">
@@ -473,12 +483,69 @@ function SidePanel({ q, setQ }: { q: Question; setQ: SetQ }) {
           <textarea className="textarea" value={q.note ?? ''} onChange={(e) => setQ((x) => ({ ...x, note: e.target.value || undefined }))} />
         </label>
       )}
-      <label className="field">Fond de cette question
-        <div className="row">
-          <input type="color" value={q.bg ?? '#888888'} onChange={(e) => setQ((x) => ({ ...x, bg: e.target.value }))} style={{ width: 50, height: 34, border: 'none', background: 'none', opacity: q.bg ? 1 : 0.35 }} title="Choisir une couleur" />
-          {q.bg ? <button className="btn btn-sm" onClick={() => setQ((x) => ({ ...x, bg: undefined }))}>Thème par défaut</button> : <span className="small muted">celui du thème</span>}
-        </div>
+      <QuestionLookEditor q={q} setQ={setQ} onAll={onAll} />
+    </div>
+  );
+}
+
+/** Apparence propre à une question : fond, couleur du texte, mise en page, taille du titre, transition, décor. */
+function QuestionLookEditor({ q, setQ, onAll }: { q: Question; setQ: SetQ; onAll: (l?: QuestionLook) => void }) {
+  const l: QuestionLook = qlookOf(q) ?? {};
+  const set = (p: Partial<QuestionLook>) => setQ((x) => ({ ...x, bg: undefined, look: { ...l, ...p } }));
+  const mode = l.bgMode ?? 'quiz';
+  return (
+    <div className="look-box">
+      <div className="small muted" style={{ fontWeight: 700 }}>🎨 Apparence de cette question</div>
+      <label className="field">Fond
+        <select className="select" value={mode} onChange={(e) => set({ bgMode: e.target.value as QuestionLook['bgMode'] })}>
+          <option value="quiz">Comme le reste du quiz</option>
+          <option value="color">Couleur unie</option>
+          <option value="gradient">Dégradé</option>
+          <option value="image">Image</option>
+        </select>
       </label>
+      {(mode === 'color' || mode === 'gradient') && <ColorField label={mode === 'gradient' ? 'Couleur 1' : 'Couleur'} value={l.bg} fallback="#3d8bfd" onChange={(v) => set({ bg: v })} />}
+      {mode === 'gradient' && <ColorField label="Couleur 2" value={l.bg2} fallback="#8b5cf6" onChange={(v) => set({ bg2: v })} />}
+      {mode === 'gradient' && <label className="field">Direction <input type="range" min={0} max={360} step={5} value={l.gradAngle ?? 135} onChange={(e) => set({ gradAngle: Number(e.target.value) })} /></label>}
+      {mode === 'image' && (
+        <>
+          <div className="row">
+            <button className="btn btn-sm" onClick={async () => { const f = await pickFile('image/*'); if (f) set({ bgImage: await fileToDataUrl(f, 1920) }); }}>🖼 Image de fond</button>
+            {l.bgImage && <img src={l.bgImage} alt="" style={{ height: 34, borderRadius: 6 }} />}
+          </div>
+          <label className="field">Voile sombre <input type="range" min={0} max={0.85} step={0.05} value={l.overlay ?? 0.3} onChange={(e) => set({ overlay: Number(e.target.value) })} /></label>
+        </>
+      )}
+      <ColorField label="Couleur du texte" value={l.fg} fallback="#ffffff" onChange={(v) => set({ fg: v })} />
+      <label className="field">Mise en page (grand écran)
+        <select className="select" value={l.layout ?? 'auto'} onChange={(e) => set({ layout: e.target.value as QuestionLook['layout'] })}>
+          <option value="auto">Image au-dessus des réponses</option>
+          <option value="media-left">Image à gauche</option>
+          <option value="media-right">Image à droite</option>
+          <option value="media-big">Grande image</option>
+          <option value="text-only">Sans image (texte seul)</option>
+        </select>
+      </label>
+      <label className="field">Taille du titre <b style={{ color: 'var(--fg)' }}>{Math.round((l.titleScale ?? 1) * 100)} %</b>
+        <input type="range" min={0.6} max={1.8} step={0.05} value={l.titleScale ?? 1} onChange={(e) => set({ titleScale: Number(e.target.value) })} />
+      </label>
+      <label className="field">Transition d’arrivée
+        <select className="select" value={l.transition ?? 'quiz'} onChange={(e) => set({ transition: e.target.value as TransitionId | 'quiz' })}>
+          <option value="quiz">Comme le reste du quiz</option>
+          {TRANSITIONS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+      </label>
+      <label className="field">Décor animé
+        <select className="select" value={l.deco ?? 'quiz'} onChange={(e) => set({ deco: e.target.value as DecoId | 'quiz' })}>
+          <option value="quiz">Comme le reste du quiz</option>
+          {DECOS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+      </label>
+      {l.deco === 'emoji' && <input className="input" placeholder="Emojis : 🎉⚽" value={l.decoEmoji ?? ''} onChange={(e) => set({ decoEmoji: e.target.value })} />}
+      <div className="row">
+        {Object.keys(l).length > 0 && <button className="btn btn-sm" onClick={() => setQ((x) => ({ ...x, look: undefined, bg: undefined }))}>↺ Réinitialiser</button>}
+        <button className="btn btn-sm" onClick={() => onAll(qlookOf(q))}>Appliquer à toutes</button>
+      </div>
     </div>
   );
 }

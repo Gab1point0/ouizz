@@ -19,7 +19,8 @@ Quiz stockés dans le navigateur de l'animateur (IndexedDB via idb-keyval, `src/
 - `src/net/protocol.ts` (messages), `src/net/transport.ts` (Supabase ou BroadcastChannel « mode test » entre onglets).
 - `src/pages/Player.tsx` (téléphone, identité gardée par PIN → reconnexion automatique), `Host.tsx` (grand écran), `Editor.tsx`, `Library.tsx`.
 - Style : `src/styles/base.css` + `animations.css` (classes `.anim-*`, décors `.deco-*`). Thèmes = variables CSS dans `src/themes.ts`. Attributs `data-phase` / `data-qtype` sur `.app` pour styler par phase ou type.
-- Sons synthétisés (Web Audio) : `src/sfx.ts`.
+- **Apparence** : `src/style.tsx` (`resolveLook(thème, quiz.style, question.look)` → variables CSS, classes, fond, décor, transition, chrono, étiquettes ; polices Google chargées à la demande ; composant `Styled`). Modèle `QuizStyle` / `QuestionLook` dans `types.ts`. 16 thèmes prêts dans `themes.ts` (vars + réglages). Éditeur : `components/Appearance.tsx` (onglets + aperçu en direct, thèmes perso en localStorage) et `QuestionLookEditor` dans `Editor.tsx`. Les téléphones reçoivent `PubState.style` et `PubQuestion.look` (images → « media:clé », envoyées par messages `media`). L'interface de l'éditeur garde une police système (`--q-font` pour la question).
+- Sons synthétisés (Web Audio) : `src/sfx.ts` (packs de bruitages + 5 musiques d'attente).
 
 ## Vérifier
 - `npm test` (notation, import texte), `npx tsc --noEmit`, `npm run build`.

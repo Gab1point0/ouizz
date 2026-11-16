@@ -1,4 +1,4 @@
-import type { AnswerPayload, QType, Zone } from '../types';
+import type { AnswerPayload, QType, QuestionLook, QuizStyle, Zone } from '../types';
 
 // ---------- Ce que voient les téléphones (aucune bonne réponse avant la révélation) ----------
 
@@ -29,6 +29,8 @@ export interface PubQuestion {
   maxWords?: number;
   votes?: number;
   body?: string;
+  /** apparence de la question (images remplacées par « media:clé ») */
+  look?: QuestionLook;
 }
 
 export interface PubReveal {
@@ -91,6 +93,8 @@ export interface PubState {
   teams?: { id: number; name: string; color: string; score: number }[];
   /** l'animateur a mis en pause */
   paused?: boolean;
+  /** apparence du quiz pour les téléphones (images remplacées par « media:clé ») */
+  style?: QuizStyle;
 }
 
 // ---------- Messages ----------

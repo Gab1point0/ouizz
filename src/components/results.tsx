@@ -3,7 +3,8 @@ import { useMemo } from 'react';
 import type { HostGame } from '../game/host';
 import type { PubQuestion } from '../net/protocol';
 import type { Question } from '../types';
-import { LETTERS, normalize, parseBlanks } from '../util';
+import { normalize, parseBlanks } from '../util';
+import { labelFor, tile, TileLabel, useLook } from '../style';
 import { answerColor, MediaView } from './common';
 
 interface Props { game: HostGame; q: Question; pq: PubQuestion; reveal: boolean }
@@ -31,6 +32,7 @@ const answers = (g: HostGame, q: Question) => Object.entries(g.answersFor(q.id))
 const nameOf = (g: HostGame, pid: string) => g.s.players[pid]?.name ?? '?';
 
 function ChoiceBars({ game, q, pq, reveal }: Props) {
+  const look = useLook();
   const list = pq.answers ?? [];
   const counts = Object.fromEntries(list.map((a) => [a.id, 0]));
   for (const [, r] of answers(game, q)) for (const id of (r.a as string[]) ?? []) if (id in counts) counts[id]++;
@@ -45,7 +47,7 @@ function ChoiceBars({ game, q, pq, reveal }: Props) {
           <div key={a.id} className="bar" style={{ opacity: dim ? 0.35 : 1 }}>
             <div className="n">{counts[a.id]}{ok && ' ✔'}</div>
             <div className="fill anim-rise" style={{ height: `${(counts[a.id] / max) * 80}%`, background: answerColor(i) }} />
-            <div className="center small" style={{ fontWeight: 700 }}>{LETTERS[i]} · {a.text}</div>
+            <div className="center small" style={{ fontWeight: 700 }}>{labelFor(i, look)}{labelFor(i, look) && a.text ? ' · ' : ''}{a.text}</div>
           </div>
         );
       })}
@@ -308,8 +310,8 @@ export function StageAnswers({ q, pq }: { q: Question; pq: PubQuestion }) {
   if (q.type === 'truefalse') {
     return (
       <div className="ans-grid">
-        <div className="ans anim-pop" style={{ background: 'var(--a2)', justifyContent: 'center' }}>✔ Vrai</div>
-        <div className="ans anim-pop d1" style={{ background: 'var(--a1)', justifyContent: 'center' }}>✘ Faux</div>
+        <div className="ans anim-pop" style={{ ...tile(1), justifyContent: 'center' }}>✔ Vrai</div>
+        <div className="ans anim-pop d1" style={{ ...tile(0), justifyContent: 'center' }}>✘ Faux</div>
       </div>
     );
   }
@@ -319,8 +321,8 @@ export function StageAnswers({ q, pq }: { q: Question; pq: PubQuestion }) {
         {pq.answers.map((a, i) => {
           const full = q.answers?.find((x) => x.id === a.id);
           return (
-            <div key={a.id} className={`ans anim-pop d${i + 1}`} style={{ background: answerColor(i) }}>
-              <span className="letter">{LETTERS[i]}</span>
+            <div key={a.id} className={`ans anim-pop d${i + 1}`} style={tile(i)}>
+              <TileLabel i={i} />
               {full?.image && <img src={full.image} alt="" />}
               <span>{a.text}</span>
             </div>

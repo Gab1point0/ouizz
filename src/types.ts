@@ -32,8 +32,10 @@ export interface Question {
   points: 0 | 1 | 2;
   /** explication affichée après la réponse */
   note?: string;
-  /** fond personnalisé (couleur CSS) pour cette question */
+  /** ancien champ : couleur de fond (remplacé par look.bg) */
   bg?: string;
+  /** apparence propre à cette question (sinon celle du quiz) */
+  look?: QuestionLook;
 
   // choice / poll
   answers?: Choice[];
@@ -107,11 +109,84 @@ export const DEFAULT_SETTINGS: GameSettings = {
   teams: 0,
 };
 
+// ---------------- Apparence ----------------
+export type DecoId = 'none' | 'bubbles' | 'stars' | 'confetti' | 'waves' | 'snow' | 'hearts' | 'emoji' | 'bokeh' | 'grid' | 'sparkles' | 'leaves';
+export type TransitionId = 'none' | 'fade' | 'slide' | 'zoom' | 'flip' | 'bounce' | 'swing';
+export type BgMode = 'theme' | 'color' | 'gradient' | 'image';
+
+/** Réglages d'apparence d'un quiz. Tout est facultatif : ce qui manque vient du thème choisi. */
+export interface QuizStyle {
+  // fond
+  bgMode?: BgMode;
+  bg?: string;
+  bg2?: string;
+  gradAngle?: number;
+  gradType?: 'linear' | 'radial';
+  bgImage?: string;
+  bgFit?: 'cover' | 'contain' | 'tile';
+  /** voile sombre (0..0.85) ou clair (négatif) par-dessus l'image */
+  overlay?: number;
+  blur?: number;
+  // couleurs
+  fg?: string;
+  muted?: string;
+  accent?: string;
+  card?: string;
+  /** opacité des cartes (0.2..1) */
+  cardOpacity?: number;
+  answerColors?: string[];
+  // texte
+  font?: string;
+  titleFont?: string;
+  titleScale?: number;
+  titleUpper?: boolean;
+  titleAlign?: 'center' | 'left';
+  textShadow?: boolean;
+  // formes
+  radius?: number;
+  tileStyle?: 'solid' | 'flat' | 'outline' | 'gradient' | 'glass' | '3d' | 'pastel';
+  labels?: 'letters' | 'numbers' | 'shapes' | 'emoji' | 'none';
+  labelEmojis?: string;
+  // animations
+  deco?: DecoId;
+  decoEmoji?: string;
+  decoAmount?: number;
+  transition?: TransitionId;
+  timerStyle?: 'circle' | 'bar' | 'number' | 'hidden';
+  confettiOnPodium?: boolean;
+  phoneCelebrate?: boolean;
+  // ambiance sonore
+  music?: 'calm' | 'party' | 'retro' | 'suspense' | 'lounge' | 'none';
+  soundPack?: 'classic' | 'retro' | 'soft' | 'none';
+  // identité
+  logo?: string;
+  lobbyMessage?: string;
+  endMessage?: string;
+  /** l'apparence s'applique aussi aux téléphones */
+  phonesThemed?: boolean;
+}
+
+export interface QuestionLook {
+  bgMode?: 'quiz' | 'color' | 'gradient' | 'image';
+  bg?: string;
+  bg2?: string;
+  gradAngle?: number;
+  bgImage?: string;
+  overlay?: number;
+  fg?: string;
+  layout?: 'auto' | 'media-left' | 'media-right' | 'media-big' | 'text-only';
+  titleScale?: number;
+  transition?: TransitionId | 'quiz';
+  deco?: DecoId | 'quiz';
+  decoEmoji?: string;
+}
+
 export interface Quiz {
   id: string;
   title: string;
   description?: string;
   theme: string;
+  style?: QuizStyle;
   cover?: Media;
   questions: Question[];
   settings?: Partial<GameSettings>;

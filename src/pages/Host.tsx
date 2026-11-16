@@ -1,11 +1,12 @@
 // Grand écran de l'animateur : préparation, salle d'attente (QR code), questions, résultats, podium.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { appUrl, Confetti, Deco, go, QR, ReactionsLayer, Timer, type FloatingReaction } from '../components/common';
+import { appUrl, Confetti, go, QR, ReactionsLayer, Timer, type FloatingReaction } from '../components/common';
+import { qlookOf, resolveLook, Styled } from '../style';
 import { Results, StageAnswers, StageMedia } from '../components/results';
 import { clearSavedGame, HostGame, loadSavedGame, newPin, type HostSnapshot } from '../game/host';
 import { openTransport } from '../net/transport';
 import { isScored, QT, questionProblems } from '../qtypes';
-import { play, setMusicEnabled, setSoundEnabled, startMusic, stopMusic } from '../sfx';
+import { play, setMusicEnabled, setSoundEnabled, setSoundPack, startMusic, stopMusic } from '../sfx';
 import { getQuiz, saveQuiz, saveReport } from '../storage';
 import { themeStyle } from '../themes';
 import { DEFAULT_SETTINGS, type GameSettings, type Quiz } from '../types';
@@ -26,6 +27,7 @@ export function HostPage({ quizId }: { quizId: string }) {
       void saveQuiz({ ...quiz, settings });
       setSoundEnabled(settings.sounds);
       setMusicEnabled(settings.music);
+      setSoundPack(quiz.style?.soundPack);
       setGame(new HostGame(quiz, settings, t, { pin, local: resume?.local ?? local, resume }));
     }} />;
   }
@@ -43,8 +45,7 @@ function Setup({ quiz, onStart }: { quiz: Quiz; onStart: (s: GameSettings, local
     <label className="check"><input type="checkbox" checked={!!s[k]} onChange={(e) => set(k, e.target.checked as never)} /> <span>{label}{help && <span className="muted small"> — {help}</span>}</span></label>
   );
   return (
-    <div className="app" style={themeStyle(quiz.theme)}>
-      <Deco theme={quiz.theme} />
+    <Styled look={resolveLook(quiz.theme, quiz.style)}>
       <div className="page" style={{ position: 'relative', zIndex: 1, maxWidth: 760 }}>
         <div className="row" style={{ marginBottom: 16 }}>
           <button className="btn btn-ghost" onClick={() => go('/host')}>← Mes quiz</button>
@@ -93,7 +94,7 @@ function Setup({ quiz, onStart }: { quiz: Quiz; onStart: (s: GameSettings, local
           <button className="btn btn-primary btn-big" disabled={!quiz.questions.length} onClick={() => onStart(s, local)}>Ouvrir la salle d’attente</button>
         </div>
       </div>
-    </div>
+    </Styled>
   );
 }
 
@@ -133,7 +134,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
   }, [game]);
 
   useEffect(() => {
-    if (s.phase === 'lobby') startMusic(); else stopMusic();
+    if (s.phase === 'lobby') startMusic(game.quiz.style?.music ?? resolveLook(game.quiz.theme).style.music ?? 'calm'); else stopMusic();
     if (s.phase === 'podium') {
       play('podium');
       if (!reportSaved.current) {
@@ -196,17 +197,18 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
     </div>
   );
 
-  const bg = q?.bg && s.phase !== 'lobby' && s.phase !== 'podium' && s.phase !== 'leaderboard' ? { background: q.bg } : {};
+  const inQuestion = s.phase === 'ready' || s.phase === 'question' || s.phase === 'reveal';
+  const look = resolveLook(game.quiz.theme, game.quiz.style, inQuestion && q ? qlookOf(q) : undefined);
+  const logo = look.logo ? <img src={look.logo} alt="" className="stage-logo" /> : null;
 
   return (
-    <div className="app" data-phase={s.phase} data-qtype={q?.type} style={{ ...themeStyle(game.quiz.theme), ...bg }}>
-      <Deco theme={game.quiz.theme} />
+    <Styled look={look} attrs={{ 'data-phase': s.phase, 'data-qtype': q?.type }}>
       <ReactionsLayer items={reactions} />
-      <div className="stage">
+      <div key={`${s.phase}:${s.idx}:${s.sub ?? ''}`} className={`stage tr-${look.transition}`}>
         {s.phase === 'lobby' && (
           <>
             <div className="stage-top">
-              <span className="logo">Ou<b>izz</b></span>
+              {logo ?? <span className="logo">Ou<b>izz</b></span>}
               <span className="spacer" />
               <button className="btn btn-sm btn-ghost" onClick={onQuit}>Quitter</button>
             </div>
@@ -221,6 +223,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
               </div>
             </div>
             <h1 className="center">{game.quiz.title}</h1>
+            {look.style.lobbyMessage && <div className="center anim-fade" style={{ fontSize: '1.3em', whiteSpace: 'pre-wrap' }}>{look.style.lobbyMessage}</div>}
             <div className="center" style={{ fontSize: '1.4em', fontWeight: 800 }}>{players.length} joueur{players.length > 1 ? 's' : ''} {players.length === 0 && <span className="muted">— en attente…</span>}</div>
             <div className="players">
               {players.map((p) => (
@@ -239,7 +242,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
 
         {s.phase === 'ready' && q && (
           <>
-            <div className="stage-top"><span className="chip">Question {s.idx + 1}/{s.order.length}</span><span className="spacer" />{q.points === 2 && <span className="badge">Points doublés ×2</span>}</div>
+            <div className="stage-top">{logo}<span className="chip">Question {s.idx + 1}/{s.order.length}</span><span className="spacer" />{q.points === 2 && <span className="badge">Points doublés ×2</span>}</div>
             <div className="stage-body col" style={{ flexDirection: 'column' }}>
               <div className="anim-pop" style={{ fontSize: '4em' }}>{QT[q.type].icon}</div>
               <div className="chip anim-slide" style={{ fontSize: '1.2em' }}>{QT[q.type].label}</div>
@@ -253,6 +256,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
         {s.phase === 'question' && q && pq && (
           <>
             <div className="stage-top">
+              {logo}
               <span className="chip">{q.type === 'slide' ? 'Diapositive' : `Question ${s.idx + 1}/${s.order.length}`}</span>
               {q.type !== 'slide' && <span className="chip">{QT[q.type].icon} {QT[q.type].label}{s.sub === 'vote' ? ' — vote' : ''}</span>}
               {q.points === 2 && <span className="badge">×2</span>}
@@ -261,7 +265,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
               {(s.endsAt > 0 || s.pausedLeft !== undefined) && <Timer endsAt={s.endsAt} total={total} paused={s.pausedLeft} />}
             </div>
             {(q.title || q.type !== 'slide') && <div className="stage-title anim-down">{q.title}</div>}
-            <div className="stage-body" style={{ flexDirection: 'column' }}>
+            <div className={`stage-body layout-${look.layout}`}>
               <StageMedia q={q} />
               {q.type === 'slide' && q.body && <div className="card anim-slide" style={{ fontSize: '1.5em', whiteSpace: 'pre-wrap', maxWidth: 1100 }}>{q.body}</div>}
               {q.type === 'buzzer' ? (
@@ -283,6 +287,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
         {s.phase === 'reveal' && q && pq && (
           <>
             <div className="stage-top">
+              {logo}
               <span className="chip">Question {s.idx + 1}/{s.order.length}</span>
               <span className="chip">{QT[q.type].icon} {QT[q.type].label}</span>
               <span className="spacer" />
@@ -310,7 +315,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
 
         {s.phase === 'podium' && <Podium game={game} onQuit={onQuit} />}
       </div>
-    </div>
+    </Styled>
   );
 }
 
@@ -388,13 +393,14 @@ function Podium({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
   };
   return (
     <>
-      <Confetti />
+      {game.quiz.style?.confettiOnPodium !== false && <Confetti />}
       <div className="stage-top"><h1>🏆 {game.quiz.title}</h1><span className="spacer" />
         <button className="btn btn-sm" onClick={() => setTable((x) => !x)}>{table ? 'Podium' : 'Tous les résultats'}</button>
         <button className="btn btn-sm" onClick={exportCsv}>Exporter (Excel/CSV)</button>
         <button className="btn btn-sm" onClick={onQuit}>Terminer</button>
       </div>
       {game.s.settings.teams > 0 && <TeamBoard game={game} />}
+      {game.quiz.style?.endMessage && <div className="center anim-slide" style={{ fontSize: '1.4em', fontWeight: 700, whiteSpace: 'pre-wrap' }}>{game.quiz.style.endMessage}</div>}
       {!table ? (
         <div className="stage-body" style={{ alignItems: 'flex-end' }}>
           <div className="podium">

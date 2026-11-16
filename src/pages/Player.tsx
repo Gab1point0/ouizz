@@ -1,7 +1,8 @@
 // Écran du téléphone d'un joueur.
 import { useEffect, useRef, useState } from 'react';
 import { AnswerInput } from '../components/answers';
-import { Deco, go, useCountdown } from '../components/common';
+import { Confetti, go, useCountdown } from '../components/common';
+import { resolveLook, Styled } from '../style';
 import { AVATARS, REACTIONS, TEAM_COLORS, TEAM_NAMES, type Msg, type PubState } from '../net/protocol';
 import { openTransport, type NetStatus, type Transport } from '../net/transport';
 import { QT } from '../qtypes';
@@ -102,7 +103,8 @@ function PlayerGame({ pin, me, local, onLeave }: { pin: string; me: Me; local: b
         // pas encore inscrit (l'animateur a redémarré) : on se représente
         if (s.phase !== 'podium' && !s.players.some((p) => p.pid === me.pid)) hello();
         setSt(s);
-        const keys = [s.q?.mediaKey, ...(s.q?.answers ?? []).map((a) => a.imageKey)].filter(Boolean) as string[];
+        const fromStyle = [s.style?.bgImage, s.style?.logo, s.q?.look?.bgImage].filter((x) => x?.startsWith('media:')).map((x) => x!.slice(6));
+        const keys = [s.q?.mediaKey, ...(s.q?.answers ?? []).map((a) => a.imageKey), ...fromStyle].filter(Boolean) as string[];
         const missing = keys.filter((k) => !mediaRef.current[k]);
         if (missing.length) t.send({ t: 'need', pid: me.pid, keys: missing });
       } else if (m.t === 'media') {
@@ -155,12 +157,16 @@ function PlayerGame({ pin, me, local, onLeave }: { pin: string; me: Me; local: b
   };
   const react = (e: string) => tRef.current?.send({ t: 'react', pid: me.pid, e });
 
-  const style = themeStyle(st?.theme ?? 'craie');
-  const wrap = (children: React.ReactNode, bg?: string) => (
-    <div className="app" data-phase={st?.phase} data-qtype={st?.q?.type} style={{ ...style, ...(bg ? { background: bg } : {}) }}>
-      <Deco theme={st?.theme} />
-      <div className="phone" style={{ maxWidth: 560, margin: '0 auto' }}>{children}</div>
-    </div>
+  const img = (src: string) => (src.startsWith('media:') ? media[src.slice(6)] : src);
+  const look = resolveLook(st?.theme ?? 'craie', st?.style, st && st.phase !== 'lobby' && st.phase !== 'podium' && st.phase !== 'leaderboard' ? st.q?.look : undefined, img);
+  const screenKey = `${st?.phase}:${st?.qNum}:${st?.sub ?? ''}`;
+  const wrap = (children: React.ReactNode) => (
+    <Styled look={look} attrs={{ 'data-phase': st?.phase, 'data-qtype': st?.q?.type }}>
+      <div key={screenKey} className={`phone tr-${look.transition}`} style={{ maxWidth: 560, margin: '0 auto' }}>
+        {look.logo && <img src={look.logo} alt="" className="stage-logo" style={{ alignSelf: 'center', maxHeight: 40 }} />}
+        {children}
+      </div>
+    </Styled>
   );
 
   if (kicked) return wrap(<div className="phone-main center"><div className="big-emoji">🚪</div><h2>Tu as été retiré de la partie.</h2><button className="btn" onClick={onLeave}>Revenir</button></div>);
@@ -260,7 +266,7 @@ function PlayerGame({ pin, me, local, onLeave }: { pin: string; me: Me; local: b
       } else if (!res?.a) {
         fb = <Feedback color="#868e96" title="Pas de réponse" sub="Trop tard !" emoji="⌛" />;
       } else if ((res.f ?? 0) >= 0.999) {
-        fb = <Feedback color="#20b486" title="Bonne réponse !" sub={`+${res.g} points${(res.s ?? 0) >= 2 ? ` · série 🔥${res.s}` : ''}`} emoji="✅" />;
+        fb = <>{look.style.phoneCelebrate !== false && <Confetti count={50} />}<Feedback color="#20b486" title="Bonne réponse !" sub={`+${res.g} points${(res.s ?? 0) >= 2 ? ` · série 🔥${res.s}` : ''}`} emoji="✅" /></>;
       } else if ((res.f ?? 0) > 0) {
         fb = <Feedback color="#f08c00" title="Presque !" sub={`${Math.round((res.f ?? 0) * 100)} % juste · +${res.g} points`} emoji="🤏" />;
       } else {
@@ -288,6 +294,7 @@ function PlayerGame({ pin, me, local, onLeave }: { pin: string; me: Me; local: b
           <h1 className="anim-slide">{rank ? `${rank}${rank === 1 ? 'er' : 'e'} sur ${st.players.length}` : 'Fin de la partie'}</h1>
           <div style={{ fontSize: '1.6em', fontWeight: 800 }}>{meP?.score ?? 0} points</div>
           {myTeam !== undefined && myTeam >= 0 && st.teams && <div className="chip" style={{ background: st.teams[myTeam].color, color: '#fff' }}>Équipe {st.teams[myTeam].name} : {myTeam + 1}{myTeam === 0 ? 're' : 'e'}</div>}
+          {look.style.endMessage && <div className="card" style={{ whiteSpace: 'pre-wrap' }}>{look.style.endMessage}</div>}
           <button className="btn" onClick={() => { onLeave(); go('/'); }}>Rejouer avec un autre code</button>
         </div>
         {reactBar}

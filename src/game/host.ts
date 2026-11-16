@@ -6,6 +6,7 @@ import { computePoints, grade } from '../scoring';
 import type { AnswerPayload, GameSettings, Question, Quiz } from '../types';
 import { normalize, parseBlanks, shuffle, shuffleDifferent, uid } from '../util';
 import { shrinkDataUrl } from '../image';
+import { qlookOf } from '../style';
 import { TEAM_COLORS, TEAM_NAMES, type Msg, type Phase, type PubQuestion, type PubReveal, type PubState, type ToHost } from '../net/protocol';
 import type { NetStatus, Transport } from '../net/transport';
 
@@ -565,6 +566,8 @@ export class HostGame {
     if (q.type === 'scale') Object.assign(pq, { statements: q.statements, scaleMax: q.scaleMax ?? 5, minLabel: q.minLabel, maxLabel: q.maxLabel });
     if (q.type === 'wordcloud' || q.type === 'brainstorm') { pq.maxWords = q.maxWords ?? 1; pq.votes = q.votes ?? 3; }
     if (q.type === 'slide' && phonesSee) pq.body = q.body;
+    const ql = qlookOf(q);
+    if (ql && this.phonesThemed) pq.look = { ...ql, bgImage: ql.bgImage ? `media:${q.id}:bg` : undefined };
     return pq;
   }
 
@@ -607,6 +610,7 @@ export class HostGame {
       res: {},
       showOnPhones: this.s.settings.showOnPhones,
       paused: this.s.pausedLeft !== undefined || undefined,
+      style: this.pubStyle(),
     };
     if (this.s.settings.teams) st.teams = this.teamScores().map(({ id, name, color, score }) => ({ id, name, color, score }));
     if (q && this.s.phase !== 'lobby' && this.s.phase !== 'podium') {
@@ -631,6 +635,15 @@ export class HostGame {
     return st;
   }
 
+  get phonesThemed() { return this.quiz.style?.phonesThemed !== false; }
+
+  /** Apparence envoyée aux téléphones : les images passent par des messages « media » séparés. */
+  private pubStyle() {
+    const st = this.quiz.style;
+    if (!st || !this.phonesThemed) return undefined;
+    return { ...st, bgImage: st.bgImage ? 'media:style:bg' : undefined, logo: st.logo ? 'media:style:logo' : undefined };
+  }
+
   private send(m: Msg) { this.t.send(m); }
 
   /** Envoie l'état à tous (regroupé pour ne pas inonder le réseau). */
@@ -651,17 +664,22 @@ export class HostGame {
   // ---------- images envoyées aux téléphones ----------
   private mediaSrc(key: string): string | undefined {
     const [qid, kind, aid] = key.split(':');
+    if (qid === 'style') return kind === 'bg' ? this.quiz.style?.bgImage : kind === 'logo' ? this.quiz.style?.logo : undefined;
     const q = this.qs[qid];
     if (!q) return;
+    if (kind === 'bg') return qlookOf(q)?.bgImage;
     if (kind === 'm') return q.media?.kind === 'image' ? q.media.src : undefined;
     if (kind === 'a') return q.answers?.find((a) => a.id === aid)?.image;
   }
 
   private resendMedia() {
+    const st = this.pubStyle();
+    const keys: string[] = [st?.bgImage, st?.logo].filter(Boolean).map((k) => k!.slice(6));
     const q = this.question;
-    if (!q) return;
-    const pq = this.pubQuestion(q);
-    const keys = [pq.mediaKey, ...(pq.answers ?? []).map((a) => a.imageKey)].filter(Boolean) as string[];
+    if (q) {
+      const pq = this.pubQuestion(q);
+      keys.push(...([pq.mediaKey, pq.look?.bgImage?.slice(6), ...(pq.answers ?? []).map((a) => a.imageKey)].filter(Boolean) as string[]));
+    }
     if (keys.length) void this.sendMedia(keys);
   }
 
