@@ -392,8 +392,9 @@ table.results th, table.results td { padding: 6px 8px; border-bottom: 1px solid 
 .mg-hand { position: relative; height: 34vh; min-height: 180px; border-radius: 26px; border: 4px solid var(--line); background: var(--card); color: var(--fg); display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; cursor: pointer; transition: transform .06s; }
 .mg-hand:active { transform: scale(.96); }
 .mg-hand.next { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
-.mg-hand-emoji { font-size: 5.5em; line-height: 1; transition: translate .08s; display: inline-block; }
-.mg-hand.up .mg-hand-emoji { translate: 0 -16px; }
+.mg-palm { width: min(78%, 150px); height: auto; display: block; translate: 0 10px; transition: translate .09s ease-out; filter: drop-shadow(0 6px 6px rgba(0,0,0,.18)); }
+/* le geste « 6-7 » : la main tapée monte, l'autre descend */
+.mg-hand.up .mg-palm { translate: 0 -22px; }
 .mg-hand-num { font-size: 1.6em; font-weight: 900; opacity: .6; }
 .mg-wrong .mg-hand { border-color: #e5484d; }
 .mg-runner-top { display: flex; justify-content: space-between; align-items: center; font-size: 1.3em; }

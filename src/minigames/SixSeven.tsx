@@ -70,11 +70,46 @@ export function SixSeven({ endsAt, onFinish }: MinigameProps) {
       <div className="mg-67-hands">
         {(['L', 'R'] as const).map((side) => (
           <button key={side} type="button" className={`mg-hand ${playing && expected === side ? 'next' : ''} ${last === side ? 'up' : ''}`} onPointerDown={tap(side)}>
-            <span className="mg-hand-emoji" style={side === 'L' ? { transform: 'scaleX(-1)' } : undefined}>🫴</span>
+            <PalmUp side={side} />
             <span className="mg-hand-num">{side === 'L' ? '6' : '7'}</span>
           </button>
         ))}
       </div>
     </div>
+  );
+}
+
+/** Main ouverte, paume vers le haut, vue du dessus (doigts vers l'avant, pouce vers l'extérieur). Dessin maison : identique sur tous les téléphones. */
+function PalmUp({ side }: { side: 'L' | 'R' }) {
+  return (
+    <svg className="mg-palm" viewBox="0 0 120 130" aria-hidden style={side === 'L' ? { transform: 'scaleX(-1)' } : undefined}>
+      <defs>
+        <radialGradient id="mg-palm-g" cx="50%" cy="62%" r="55%">
+          <stop offset="0%" stopColor="#ffd9a8" />
+          <stop offset="100%" stopColor="#f2b56b" />
+        </radialGradient>
+      </defs>
+      <g stroke="#c98a3e" strokeWidth="3" strokeLinejoin="round">
+        {/* doigts (de l'auriculaire à l'index), dessinés derrière la paume */}
+        <rect x="20" y="30" width="16" height="50" rx="8" fill="#f6c27a" />
+        <rect x="38" y="14" width="17" height="64" rx="8.5" fill="#f6c27a" />
+        <rect x="57" y="10" width="17" height="68" rx="8.5" fill="#f6c27a" />
+        <rect x="76" y="18" width="16" height="60" rx="8" fill="#f6c27a" />
+        {/* pouce, vers l'extérieur */}
+        <rect x="86" y="62" width="17" height="44" rx="8.5" fill="#f6c27a" transform="rotate(-42 94 84)" />
+        {/* paume */}
+        <path d="M18 70 Q18 58 30 58 L86 58 Q98 58 98 72 L96 98 Q92 122 58 122 Q24 122 20 98 Z" fill="url(#mg-palm-g)" />
+      </g>
+      {/* plis de la paume : on voit bien que c'est l'intérieur de la main */}
+      <g fill="none" stroke="#d99a52" strokeWidth="2.5" strokeLinecap="round" opacity=".8">
+        <path d="M30 76 Q55 70 86 78" />
+        <path d="M34 90 Q56 84 80 94" />
+        <path d="M74 66 Q62 92 70 114" />
+      </g>
+      {/* phalanges */}
+      <g stroke="#e0a45c" strokeWidth="2" strokeLinecap="round" opacity=".7">
+        <path d="M24 50 h8" /><path d="M42 36 h9" /><path d="M61 32 h9" /><path d="M80 40 h8" />
+      </g>
+    </svg>
   );
 }
