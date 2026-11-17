@@ -1,4 +1,5 @@
 // Affichage des résultats d'une question sur le grand écran, un rendu par type.
+import { minigameOf } from '../minigames';
 import { Rich } from './Rich';
 import { useMemo } from 'react';
 import type { HostGame } from '../game/host';
@@ -28,6 +29,7 @@ export function Results(p: Props) {
     case 'draw': return <Gallery {...p} />;
     case 'brainstorm': return <Ideas {...p} />;
     case 'buzzer': return <BuzzResult {...p} />;
+    case 'minigame': return <MinigameScores {...p} />;
     default: return null;
   }
 }
@@ -310,6 +312,41 @@ function BuzzResult({ game, q }: Props) {
 }
 
 /** Pendant la question : les réponses à choisir (grand écran) */
+function MinigameScores({ game, q }: Props) {
+  const def = minigameOf(q.minigame);
+  const list = answers(game, q).map(([pid, r]) => ({ pid, score: Number(r.a) || 0, g: r.g ?? 0 })).sort((a, b) => b.score - a.score);
+  const best = Math.max(1, ...list.map((x) => x.score));
+  if (!list.length) return <div className="center muted" style={{ fontSize: '1.4em' }}>Personne n’a joué…</div>;
+  return (
+    <div className="col mg-scores" style={{ width: 'min(900px, 100%)', gap: 8 }}>
+      {list.map((x, i) => (
+        <div key={x.pid} className={`mg-score-row anim-slide d${Math.min(i + 1, 8)}`}>
+          <span className="rank">{i === 0 ? '👑' : i + 1}</span>
+          <b className="mg-score-name">{game.s.players[x.pid]?.avatar} {nameOf(game, x.pid)}</b>
+          <span className="mg-score-bar"><i style={{ width: `${(x.score / best) * 100}%`, background: answerColor(i) }} /></span>
+          <b className="mg-score-val">{x.score} {def.unit}</b>
+          {x.g > 0 && <span className="muted small">+{x.g}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Grand écran pendant un mini-jeu : consignes + joueurs qui ont fini. */
+export function MinigameStage({ game, q }: { game: HostGame; q: Question }) {
+  const def = minigameOf(q.minigame);
+  const done = Object.keys(game.currentAnswers).length;
+  const total = game.activePlayers.length;
+  return (
+    <div className="card center col mg-stage anim-pop" style={{ alignItems: 'center', gap: 10, maxWidth: 900 }}>
+      <div style={{ fontSize: '4em', lineHeight: 1 }}>{def.icon}</div>
+      <div style={{ fontSize: '2em', fontWeight: 900 }}>{def.name}</div>
+      <div style={{ fontSize: '1.4em' }}>{def.howTo}</div>
+      <div className="muted">🎮 À vous de jouer sur vos téléphones ! · {done}/{total} ont terminé</div>
+    </div>
+  );
+}
+
 export function StageAnswers({ q, pq }: { q: Question; pq: PubQuestion }) {
   if (q.type === 'truefalse') {
     return (

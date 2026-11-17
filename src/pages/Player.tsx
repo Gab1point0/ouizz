@@ -260,7 +260,7 @@ function PlayerGame({ pin, me, local, onLeave, onAdopt, back }: { pin: string; m
           {answered
             ? <div className="center col anim-pop" style={{ alignItems: 'center' }}><div className="big-emoji">⏳</div><h2>Réponse envoyée !</h2><div className="muted">On attend les autres… ({st.answered}/{st.players.filter((p) => p.on).length})</div></div>
             : st.paused ? <div className="center"><div className="big-emoji">⏸</div><h2>Pause</h2></div>
-              : <AnswerInput key={key} q={q} media={media} showText={st.showOnPhones} sub={st.sub} ideas={st.ideas} onSubmit={submit} />}
+              : <AnswerInput key={key} q={q} media={media} showText={st.showOnPhones} sub={st.sub} ideas={st.ideas} onSubmit={submit} endsAt={endsAt || undefined} />}
         </div>
         {answered && reactBar}
       </>);

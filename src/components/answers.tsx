@@ -1,7 +1,8 @@
 // Saisie des réponses sur le téléphone, un composant par type de question.
+import { minigameOf } from '../minigames';
 import { Sortable, useDragTo } from './Sortable';
 import { Rich } from './Rich';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PubQuestion } from '../net/protocol';
 import type { AnswerPayload } from '../types';
 import { tile, TileLabel } from '../style';
@@ -14,6 +15,8 @@ interface Props {
   sub?: 'ideas' | 'vote';
   ideas?: { id: string; text: string }[];
   onSubmit: (a: AnswerPayload) => void;
+  /** fin de la question (Date.now) */
+  endsAt?: number;
 }
 
 export function AnswerInput(p: Props) {
@@ -36,6 +39,7 @@ export function AnswerInput(p: Props) {
     case 'draw': return <DrawInput {...p} />;
     case 'brainstorm':
       return p.sub === 'vote' ? <VoteInput {...p} /> : <WordsInput {...p} n={p.q.maxWords ?? 3} max={80} placeholder="Une idée" />;
+    case 'minigame': return <MinigameInput {...p} />;
     default: return null;
   }
 }
@@ -117,6 +121,14 @@ export function SortableList({ items, onChange }: { items: { id: string; text: s
       </>
     )} />
   );
+}
+
+function MinigameInput({ q, endsAt, onSubmit }: Props) {
+  const def = minigameOf(q.minigame);
+  const sent = useRef(false);
+  const [end] = useState(() => endsAt && endsAt > Date.now() ? endsAt : Date.now() + q.time * 1000);
+  const finish = useCallback((score: number) => { if (sent.current) return; sent.current = true; onSubmit(Math.max(0, Math.round(score))); }, [onSubmit]);
+  return <def.Component endsAt={end} onFinish={finish} />;
 }
 
 function OrderInput({ q, onSubmit }: Props) {

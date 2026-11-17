@@ -4,7 +4,7 @@ import { Rich } from '../components/Rich';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { appUrl, Confetti, go, QR, ReactionsLayer, Timer, type FloatingReaction } from '../components/common';
 import { qlookOf, resolveLook, Styled } from '../style';
-import { Results, StageAnswers, StageMedia } from '../components/results';
+import { MinigameStage, Results, StageAnswers, StageMedia } from '../components/results';
 import { MediaView } from '../components/MediaPlayer';
 import { clearSavedGame, HostGame, loadSavedGame, newPin, type HostSnapshot } from '../game/host';
 import { openTransport } from '../net/transport';
@@ -328,7 +328,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
               ) : q.type === 'draw' ? (
                 <div className="big-emoji anim-pulse">🎨</div>
               ) : (
-                <StageAnswers q={q} pq={pq} />
+                q.type === 'minigame' ? <MinigameStage game={game} q={q} /> : <StageAnswers q={q} pq={pq} />
               )}
             </div>
             {controls}

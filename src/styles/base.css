@@ -375,3 +375,47 @@ table.results th, table.results td { padding: 6px 8px; border-bottom: 1px solid 
 @media (max-width: 760px) { .preview-frames { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
 
 .back-toast { background: #20b486; color: #fff; font-weight: 800; padding: 10px 14px; border-radius: 12px; text-align: center; }
+
+/* ================= Mini-jeux ================= */
+.mg-67, .mg-runner, .mg-dating { display: flex; flex-direction: column; gap: 10px; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.mg-67 { min-height: 62vh; }
+.mg-67-top { display: flex; align-items: center; gap: 12px; }
+.mg-bar { flex: 1; height: 10px; border-radius: 99px; background: rgba(127,127,127,.25); overflow: hidden; }
+.mg-bar i { display: block; height: 100%; background: var(--accent); transition: width .05s linear; }
+.mg-67-score { display: flex; align-items: baseline; gap: 6px; font-weight: 900; }
+.mg-67-score b { font-size: 2.2em; color: var(--accent); }
+.mg-67-mid { flex: 1; display: grid; place-items: center; min-height: 140px; }
+.mg-67-big { font-size: 7em; font-weight: 900; line-height: 1; animation: mg-pop .18s ease-out; }
+.mg-count { font-size: 5em; font-weight: 900; text-align: center; line-height: 1.1; }
+@keyframes mg-pop { from { transform: scale(1.35); } to { transform: scale(1); } }
+.mg-67-hands { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mg-hand { position: relative; height: 34vh; min-height: 180px; border-radius: 26px; border: 4px solid var(--line); background: var(--card); color: var(--fg); display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; cursor: pointer; transition: transform .06s; }
+.mg-hand:active { transform: scale(.96); }
+.mg-hand.next { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
+.mg-hand-emoji { font-size: 5.5em; line-height: 1; transition: translate .08s; display: inline-block; }
+.mg-hand.up .mg-hand-emoji { translate: 0 -16px; }
+.mg-hand-num { font-size: 1.6em; font-weight: 900; opacity: .6; }
+.mg-wrong .mg-hand { border-color: #e5484d; }
+.mg-runner-top { display: flex; justify-content: space-between; align-items: center; font-size: 1.3em; }
+.mg-runner-area { position: relative; touch-action: none; }
+.mg-runner-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mg-btn { padding: 18px 10px; font-size: 1.15em; font-weight: 900; touch-action: none; }
+.mg-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.45); color: #fff; border-radius: 16px; pointer-events: none; }
+.mg-doors { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.mg-door { container-type: size; position: relative; aspect-ratio: 3 / 4; border-radius: 10px 10px 4px 4px; background: linear-gradient(#5b3a22, #3d2716); border: 5px solid #8a5a33; border-bottom-width: 8px; overflow: hidden; touch-action: none; }
+.mg-person { position: absolute; left: 50%; bottom: 0; translate: -50% 0; display: flex; align-items: flex-end; animation: mg-rise .15s ease-out; }
+.mg-person-emoji { line-height: .9; display: block; }
+.mg-small .mg-person-emoji { font-size: 40cqh; }
+.mg-tall .mg-person-emoji { font-size: 88cqh; }
+.mg-elder .mg-person-emoji { font-size: 62cqh; }
+.mg-cane { font-size: 30cqh; margin-left: -6px; }
+.mg-half { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed rgba(255,255,255,.25); pointer-events: none; }
+.mg-hit-ok { filter: drop-shadow(0 0 10px #20b486); scale: 1.15; }
+.mg-hit-bad { filter: drop-shadow(0 0 10px #e5484d) grayscale(1); }
+@keyframes mg-rise { from { translate: -50% 100%; } to { translate: -50% 0; } }
+.mg-flash-ok .mg-doors { box-shadow: 0 0 0 4px #20b486; border-radius: 12px; }
+.mg-flash-bad .mg-doors { box-shadow: 0 0 0 4px #e5484d; border-radius: 12px; }
+.mg-score-row { display: grid; grid-template-columns: 48px minmax(120px, 240px) 1fr auto auto; gap: 12px; align-items: center; font-size: 1.3em; background: var(--card); border-radius: 14px; padding: 8px 14px; }
+.mg-score-row .rank { font-weight: 900; text-align: center; }
+.mg-score-bar { height: 16px; border-radius: 99px; background: rgba(127,127,127,.2); overflow: hidden; }
+.mg-score-bar i { display: block; height: 100%; border-radius: 99px; }

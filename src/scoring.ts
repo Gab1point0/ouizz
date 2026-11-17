@@ -37,6 +37,8 @@ export function grade(q: Question, a: AnswerPayload | undefined): number | null 
       if (ok === want.length) return 1;
       return q.partial ? ok / want.length : 0;
     }
+    case 'minigame':
+      return typeof a === 'number' && a > 0 ? 1 : 0;
     case 'slider': {
       const s = q.slider!;
       if (typeof a !== 'number') return 0;

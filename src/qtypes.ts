@@ -6,7 +6,7 @@ export interface QTypeInfo {
   type: QType;
   label: string;
   icon: string;
-  group: 'quiz' | 'avis' | 'contenu';
+  group: 'quiz' | 'jeux' | 'avis' | 'contenu';
   scored: boolean;
   help: string;
   time: number;
@@ -111,6 +111,11 @@ export const QTYPES: QTypeInfo[] = [
     type: 'brainstorm', label: 'Brainstorming + vote', icon: '💡', group: 'avis', scored: false, time: 60,
     help: 'On propose des idées, puis chacun vote pour ses préférées.',
     make: () => ({ maxWords: 3, votes: 3 }),
+  },
+  {
+    type: 'minigame', label: 'Mini-jeu', icon: '🎮', group: 'jeux', scored: true, time: 20,
+    help: 'Un petit jeu sur le téléphone (67 Challenge, course…) : le meilleur score gagne le plus de points.',
+    make: () => ({ minigame: '67', time: 20, title: '67 Challenge' }),
   },
   {
     type: 'slide', label: 'Diapositive', icon: '🖼️', group: 'contenu', scored: false, time: 0,

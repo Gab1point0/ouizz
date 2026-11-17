@@ -29,6 +29,7 @@ export interface PubQuestion {
   maxWords?: number;
   votes?: number;
   body?: string;
+  minigame?: string;
   /** apparence de la question (images remplacées par « media:clé ») */
   look?: QuestionLook;
 }

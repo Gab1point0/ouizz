@@ -1,6 +1,7 @@
 // Moteur de partie côté animateur : il fait autorité (états, chronos, points).
 // Les téléphones ne font qu'afficher l'état reçu et envoyer leurs réponses.
 
+import { minigameFractions } from '../minigames';
 import { zonesOf } from '../zones';
 import { cleanQuestion, isScored, QT } from '../qtypes';
 import { computePoints, grade } from '../scoring';
@@ -408,6 +409,8 @@ export class HostGame {
     const scored = isScored(q);
     const ans = this.answersFor(q.id);
     const limit = q.time * 1000;
+    // mini-jeu : meilleur score = tous les points, les autres au prorata, sans bonus de rapidité
+    const mg = q.type === 'minigame' ? minigameFractions(Object.fromEntries(Object.entries(ans).map(([pid, r]) => [pid, Number(r.a) || 0]))) : null;
     for (const p of this.activePlayers) {
       const rec = ans[p.pid];
       if (!scored) continue;
@@ -415,10 +418,10 @@ export class HostGame {
         if (q.type !== 'buzzer') p.streak = 0;
         continue;
       }
-      const f = grade(q, this.toCanonical(q, rec.a)) ?? 0;
+      const f = mg ? mg[p.pid] ?? 0 : grade(q, this.toCanonical(q, rec.a)) ?? 0;
       const r = computePoints({
         fraction: f, multiplier: q.points, elapsed: q.type === 'buzzer' ? 0 : rec.at, limit,
-        speedBonus: this.s.settings.speedBonus && q.type !== 'buzzer', streak: p.streak, streakBonus: this.s.settings.streakBonus,
+        speedBonus: this.s.settings.speedBonus && q.type !== 'buzzer' && q.type !== 'minigame', streak: p.streak, streakBonus: this.s.settings.streakBonus,
       });
       rec.f = f;
       rec.g = r.points;
@@ -550,6 +553,7 @@ export class HostGame {
     const sh = this.s.shuf[q.id] ?? {};
     const phonesSee = this.s.settings.showOnPhones;
     const pq: PubQuestion = { id: q.id, type: q.type, title: phonesSee || q.type === 'slide' ? q.title : '', time: q.time, points: q.points };
+    if (q.type === 'minigame') pq.minigame = q.minigame;
     if (q.media?.kind === 'image' && (phonesSee || QT[q.type].phoneNeedsMedia)) pq.mediaKey = `${q.id}:m`;
     if (q.answers) {
       const byId = Object.fromEntries(q.answers.map((a) => [a.id, a]));

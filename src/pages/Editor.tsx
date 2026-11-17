@@ -1,4 +1,5 @@
 // Éditeur de quiz : liste des questions à gauche, question au centre, réglages à droite.
+import { MINIGAMES } from '../minigames';
 import { PreviewModal } from '../components/PreviewModal';
 import { CropModal, cropPoint, type CropRect } from '../components/CropModal';
 import { Grip, Sortable } from '../components/Sortable';
@@ -158,7 +159,7 @@ export function EditorPage({ quizId }: { quizId: string }) {
 }
 
 function TypePicker({ onPick, onClose }: { onPick: (t: QType) => void; onClose: () => void }) {
-  const groups: [string, 'quiz' | 'avis' | 'contenu'][] = [['Questions notées', 'quiz'], ['Recueillir des avis', 'avis'], ['Contenu', 'contenu']];
+  const groups: [string, 'quiz' | 'jeux' | 'avis' | 'contenu'][] = [['Questions notées', 'quiz'], ['Mini-jeux (sur le téléphone)', 'jeux'], ['Recueillir des avis', 'avis'], ['Contenu', 'contenu']];
   return (
     <Modal onClose={onClose}>
       <h2>Quel type de question ?</h2>
@@ -459,6 +460,21 @@ function TypeEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
       );
     }
     case 'pin': return null;
+    case 'minigame':
+      return (
+        <div className="card col">
+          <div className="small muted">Choisis le mini-jeu. Tout le monde joue en même temps sur son téléphone pendant le temps limite ; le meilleur score gagne tous les points, les autres au prorata.</div>
+          <div className="type-grid">
+            {MINIGAMES.map((m) => (
+              <button key={m.id} className={`type-btn ${(q.minigame ?? '67') === m.id ? 'active' : ''}`}
+                onClick={() => setQ((x) => ({ ...x, minigame: m.id, time: m.time, title: !x.title || MINIGAMES.some((o) => o.name === x.title) ? m.name : x.title }))}>
+                <span style={{ fontSize: '1.6em' }}>{m.icon}</span>
+                <span><b>{m.name}</b><br /><span className="muted">{m.pitch}</span><br /><span className="muted small">Durée conseillée : {m.time} s</span></span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
     case 'match': {
       const pairs = q.pairs ?? [];
       const set = (v: typeof pairs) => setQ((x) => ({ ...x, pairs: v }));
@@ -657,8 +673,8 @@ function SidePanel({ q, setQ, onAll }: { q: Question; setQ: SetQ; onAll: (l?: Qu
     <div className="ed-side">
       <div className="small muted" style={{ fontWeight: 700 }}>Type de question</div>
       <select className="select" value={q.type} onChange={(e) => setQ((x) => changeType(x, e.target.value as QType))}>
-        {(['quiz', 'avis', 'contenu'] as const).map((g) => (
-          <optgroup key={g} label={g === 'quiz' ? 'Questions notées' : g === 'avis' ? 'Avis (sans points)' : 'Contenu'}>
+        {(['quiz', 'jeux', 'avis', 'contenu'] as const).map((g) => (
+          <optgroup key={g} label={g === 'quiz' ? 'Questions notées' : g === 'jeux' ? 'Mini-jeux' : g === 'avis' ? 'Avis (sans points)' : 'Contenu'}>
             {QTYPES.filter((t) => t.group === g).map((t) => <option key={t.type} value={t.type}>{t.icon} {t.label}</option>)}
           </optgroup>
         ))}

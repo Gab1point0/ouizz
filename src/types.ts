@@ -3,7 +3,7 @@
 
 export type QType =
   // notées
-  | 'choice' | 'truefalse' | 'type' | 'order' | 'slider' | 'pin' | 'match' | 'categorize' | 'blanks' | 'buzzer'
+  | 'choice' | 'truefalse' | 'type' | 'order' | 'slider' | 'pin' | 'match' | 'categorize' | 'blanks' | 'buzzer' | 'minigame'
   // avis (non notées)
   | 'poll' | 'wordcloud' | 'open' | 'scale' | 'ranking' | 'points100' | 'draw' | 'brainstorm'
   // contenu
@@ -87,6 +87,8 @@ export interface Question {
   votes?: number;
   // slide
   body?: string;
+  // minigame : identifiant du mini-jeu (voir src/minigames)
+  minigame?: string;
   // buzzer : réponse attendue (visible seulement sur l'écran de l'animateur)
   buzzAnswer?: string;
 }
@@ -216,7 +218,7 @@ export type AnswerPayload =
   | string[]                 // choice, poll, order, ranking, wordcloud, blanks, brainstorm (idées ou votes)
   | boolean                  // truefalse
   | string                   // type, open, draw (data URL)
-  | number                   // slider
+  | number                   // slider, minigame (score)
   | number[]                 // scale
   | { x: number; y: number } // pin
   | Record<string, string>   // match (gauche -> droite), categorize (élément -> catégorie)
