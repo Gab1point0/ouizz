@@ -1,6 +1,6 @@
 // « Clint's Dating Sim » : des gens apparaissent n'importe où à l'écran pendant un court instant.
 // Il faut toucher UNIQUEMENT les petits adultes (proportions d'adulte, juste plus petits) :
-// les hommes portent une casquette, les femmes une robe ou une jupe, et tous tiennent un verre à cocktail.
+// les hommes portent une casquette, les femmes une robe ou une jupe.
 // Pièges : les grands (sans casquette, femmes en pantalon) et les personnes âgées. Bonne cible +1, piège −1 (jamais sous 0).
 import { useEffect, useRef, useState } from 'react';
 import type { MinigameProps } from './index';
@@ -40,7 +40,8 @@ export function Person({ p }: { p: Pop }) {
         <path d="M17 146 h12 v6 h-14 q0-6 2-6 Z" fill="#1b1b1b" /><path d="M31 146 h12 q2 0 2 6 h-14 Z" fill="#1b1b1b" />
         {/* bras */}
         <rect x="9" y="50" width="7" height="44" rx="3.5" fill={top} />
-        <rect x="44" y="50" width="7" height={small ? 30 : 44} rx="3.5" fill={top} transform={small ? 'rotate(-35 47 52)' : undefined} />
+        <rect x="44" y="50" width="7" height="44" rx="3.5" fill={top} />
+        <circle cx="47.5" cy="96" r="4" fill={skin} />
         <circle cx="12.5" cy="96" r="4" fill={skin} />
         {/* buste */}
         {dress
@@ -65,14 +66,6 @@ export function Person({ p }: { p: Pop }) {
       {!p.girl && p.kind !== 'elder' && (p.look % 3 === 0) && <path d="M21 29 q9 12 18 0 q-2 8 -9 8 q-7 0 -9 -8 Z" fill={hair} opacity=".85" />}
       {p.kind === 'elder' && <g fill="none" stroke={O} strokeWidth="1.4"><circle cx="25.5" cy="25" r="4" /><circle cx="34.5" cy="25" r="4" /><path d="M29.5 25 h1" /></g>}
       {p.kind === 'elder' && <path d="M52 92 v58 M52 92 q0 -6 -6 -6" fill="none" stroke="#7a4b23" strokeWidth="3.5" strokeLinecap="round" />}
-      {/* verre à cocktail des petits adultes */}
-      {small && (
-        <g stroke={O} strokeWidth="1.6" strokeLinejoin="round" transform="translate(52 30)">
-          <path d="M-7 0 h14 l-7 9 Z" fill="#9be7ff" />
-          <path d="M0 9 v8 M-4 17 h8" fill="none" />
-          <circle cx="4" cy="-1" r="2.4" fill="#e63946" />
-        </g>
-      )}
     </svg>
   );
 }
@@ -145,7 +138,7 @@ export function DatingSim({ endsAt, onFinish }: MinigameProps) {
         <div className="mg-bar"><i style={{ width: `${(1 - progress) * 100}%` }} /></div>
         <div className="mg-67-score"><b key={score} className="anim-pop">{score}</b><span>💘</span></div>
       </div>
-      <div className="small muted center">Touche seulement les <b>petits</b> : casquette 🧢 ou robe/jupe 👗, et un cocktail 🍸 à la main. Pas les grands, pas les papis-mamies !</div>
+      <div className="small muted center">Touche seulement les <b>petits</b> : casquette 🧢 ou robe/jupe 👗. Pas les grands, pas les papis-mamies !</div>
       <div className="ds-field">
         {pops.map((p) => (
           <div key={p.id} className={`ds-person ds-${p.kind} ${p.hit ? `ds-hit-${p.hit}` : ''}`} onPointerDown={tap(p)}
