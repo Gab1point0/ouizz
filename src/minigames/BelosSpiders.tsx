@@ -1,7 +1,7 @@
 // « Belos vs Spiders » : survie en vue du dessus dans une grotte.
 // Belos (spartiate doré) se déplace au joystick (en bas à droite) et esquive les araignées qui traversent l'écran
 // (petites = rapides, grosses = lentes). Certaines laissent des toiles qui ralentissent. Des potions rouges laissent
-// du verre au sol : chaque fois qu'on marche dedans, Belos perd 5 % de vitesse pour le reste de la partie. 3 vies ; 10 points par seconde.
+// du verre au sol : en y entrant puis à chaque seconde passée dedans, Belos perd 5 % de vitesse pour le reste de la partie. 3 vies ; 10 points par seconde.
 import { useEffect, useRef, useState } from 'react';
 import type { MinigameProps } from './index';
 import { drawBelos, drawGlass, drawJoystick, drawPotion, drawSpider, drawTarget, drawTorches, drawWeb, makeCave, SKINS } from './belosArt';
@@ -21,9 +21,9 @@ interface Potion { x0: number; y0: number; x1: number; y1: number; born: number;
 interface Glass { id: number; x: number; y: number; r: number; born: number; seed: number }
 interface St {
   t: number; x: number; y: number; angle: number; moving: boolean; spiders: Spider[]; webs: Web[]; potions: Potion[]; glass: Glass[];
-  nextSpider: number; nextPotion: number; lives: number; inv: number; slow: number; inside: number[]; cut: number; pops: { text: string; t: number }[]; over: boolean; seed: number;
+  nextSpider: number; nextPotion: number; lives: number; inv: number; slow: number; inside: number[]; inT: number; cut: number; pops: { text: string; t: number }[]; over: boolean; seed: number;
 }
-const fresh = (): St => ({ t: 0, x: W / 2, y: H / 2, angle: -Math.PI / 2, moving: false, spiders: [], webs: [], potions: [], glass: [], nextSpider: 800, nextPotion: 7000, lives: 3, inv: 0, slow: 1, inside: [], cut: 0, pops: [], over: false, seed: 1 });
+const fresh = (): St => ({ t: 0, x: W / 2, y: H / 2, angle: -Math.PI / 2, moving: false, spiders: [], webs: [], potions: [], glass: [], nextSpider: 800, nextPotion: 7000, lives: 3, inv: 0, slow: 1, inside: [], inT: 0, cut: 0, pops: [], over: false, seed: 1 });
 
 export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -158,12 +158,16 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
         s.glass = s.glass.filter((g) => wall - g.born < 9000);
         // verre : chaque nouvelle entrée dans une flaque = −5 % de vitesse, jusqu'à la fin
         const now_in = s.glass.filter((g) => Math.hypot(g.x - s.x, (g.y - s.y) / 0.85) < g.r - 4).map((g) => g.id);
-        for (const id of now_in) if (!s.inside.includes(id)) {
+        // … et encore −5 % pour chaque seconde passée dedans
+        const cut = () => {
           s.slow *= GLASS_SLOW; s.cut = wall;
           s.pops.push({ text: `−5 % vitesse (${Math.round(s.slow * 100)} %)`, t: wall });
           navigator.vibrate?.(60);
           setSpeedPct(Math.round(s.slow * 100));
-        }
+        };
+        for (const id of now_in) if (!s.inside.includes(id)) { cut(); s.inT = 0; }
+        if (now_in.length) { s.inT += dt; if (s.inT >= 1000) { s.inT -= 1000; cut(); } }
+        else s.inT = 0;
         s.inside = now_in;
         const p = pts();
         if (p !== lastPts) { lastPts = p; setScore(p); }
@@ -217,7 +221,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
         {phase === 'count' && <div className="mg-overlay"><div className="mg-count anim-pop" key={count}>{count || 'GO'}</div></div>}
         {phase === 'over' && <div className="mg-overlay"><div className="mg-count" style={{ fontSize: '2em' }}>{lives <= 0 ? 'Belos est tombé…' : 'Survivant !'}<br />{score} pts</div></div>}
       </div>
-      <div className="small muted center">Joystick en bas à droite. Esquive les araignées. Les toiles ralentissent ; chaque passage dans le verre rouge te fait perdre 5 % de vitesse pour toute la partie.</div>
+      <div className="small muted center">Joystick en bas à droite. Esquive les araignées. Les toiles ralentissent ; le verre rouge fait perdre 5 % de vitesse (en entrant, puis chaque seconde dedans) pour toute la partie.</div>
     </div>
   );
 }
