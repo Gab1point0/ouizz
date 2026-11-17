@@ -420,3 +420,20 @@ table.results th, table.results td { padding: 6px 8px; border-bottom: 1px solid 
 .mg-score-row .rank { font-weight: 900; text-align: center; }
 .mg-score-bar { height: 16px; border-radius: 99px; background: rgba(127,127,127,.2); overflow: hidden; }
 .mg-score-bar i { display: block; height: 100%; border-radius: 99px; }
+
+/* Clint's Dating Sim : terrain libre */
+.ds-field { position: relative; width: 100%; aspect-ratio: 100 / 130; border-radius: 16px; overflow: hidden; touch-action: none;
+  background: radial-gradient(circle at 20% 15%, rgba(255,214,102,.55), transparent 35%), radial-gradient(circle at 80% 30%, rgba(239,71,111,.45), transparent 40%), radial-gradient(circle at 50% 90%, rgba(76,201,240,.4), transparent 45%), linear-gradient(#2b1640, #451a5c); }
+.ds-field::after { content: ''; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(rgba(255,255,255,.25) 1px, transparent 1.5px); background-size: 22px 22px; }
+.ds-person { position: absolute; z-index: 1; animation: ds-in .16s ease-out; cursor: pointer; filter: drop-shadow(0 4px 4px rgba(0,0,0,.35)); }
+.ds-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.ds-hit-ok { animation: ds-ok .25s ease-out forwards; }
+.ds-hit-bad { animation: ds-bad .25s ease-out forwards; }
+.ds-fx { position: absolute; left: 50%; top: -10%; translate: -50% 0; font-weight: 900; color: #7bf1a8; text-shadow: 0 2px 4px rgba(0,0,0,.6); white-space: nowrap; animation: ds-fx .4s ease-out forwards; }
+.ds-fx.bad { color: #ff6b6b; }
+@keyframes ds-in { from { transform: scale(.2) translateY(30%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ds-ok { to { transform: scale(1.2); opacity: 0; } }
+@keyframes ds-bad { 0% { transform: translateX(0); } 30% { transform: translateX(-6px); } 60% { transform: translateX(6px); } 100% { transform: none; opacity: 0; filter: grayscale(1); } }
+@keyframes ds-fx { to { top: -35%; opacity: 0; } }
+.mg-flash-ok .ds-field { box-shadow: 0 0 0 4px #20b486; }
+.mg-flash-bad .ds-field { box-shadow: 0 0 0 4px #e5484d; }

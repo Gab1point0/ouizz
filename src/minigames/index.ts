@@ -42,8 +42,8 @@ export const MINIGAMES: MinigameDef[] = [
   },
   {
     id: 'dating', name: 'Clint’s Dating Sim', icon: '💘', unit: '💘', time: 63, Component: DatingSim,
-    pitch: 'Des gens apparaissent dans des portes : touche uniquement les petits adultes, pas les grands ni les personnes âgées. 1 minute.',
-    howTo: 'Touchez seulement les petits adultes ! Grands et papis-mamies = −1.',
+    pitch: 'Des gens apparaissent partout à l’écran : touche uniquement les petits (casquette ou robe/jupe, cocktail à la main), pas les grands ni les personnes âgées. 1 minute.',
+    howTo: 'Touchez seulement les petits (casquette ou robe/jupe, cocktail à la main) ! Grands et papis-mamies = −1.',
   },
   {
     id: 'flap', name: 'Flap Emile', icon: '✈️', unit: '🌴', time: 45, Component: FlapEmile,

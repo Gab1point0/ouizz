@@ -58,7 +58,7 @@ try {
     await wf(host, () => document.querySelector('.app')?.dataset.phase === 'question');
     const [fast, slow] = players;
     await fast.bringToFront();
-    await wf(fast, (id) => !!document.querySelector(id === '67' ? '.mg-hand' : (id === 'maxime' || id === 'flap') ? '.mg-runner canvas' : '.mg-doors'), 10000, id);
+    await wf(fast, (id) => !!document.querySelector(id === '67' ? '.mg-hand' : (id === 'maxime' || id === 'flap') ? '.mg-runner canvas' : '.ds-field'), 10000, id);
     await sleep(3200); // compte à rebours
     if (id === '67') {
       // le joueur rapide tape 40 fois en alternant, le lent 10 fois
@@ -85,8 +85,8 @@ try {
         await p.bringToFront();
         await p.evaluate(async (smart) => {
           for (let k = 0; k < 30; k++) {
-            const el = document.querySelector(smart ? '.mg-small:not(.mg-hit-ok)' : '.mg-person:not(.mg-hit-ok):not(.mg-hit-bad)');
-            el?.closest('.mg-door')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+            const el = document.querySelector(smart ? '.ds-small:not(.ds-hit-ok)' : '.ds-person:not(.ds-hit-ok):not(.ds-hit-bad)');
+            el?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
             await new Promise((r) => setTimeout(r, 120));
           }
         }, smart);
