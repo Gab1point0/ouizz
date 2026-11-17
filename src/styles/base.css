@@ -373,3 +373,5 @@ table.results th, table.results td { padding: 6px 8px; border-bottom: 1px solid 
 .phone-shell { border-radius: 26px; outline: 6px solid #2a2a35; }
 .preview-label { position: absolute; bottom: 0; font-size: .85em; color: rgba(255,255,255,.6); }
 @media (max-width: 760px) { .preview-frames { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
+
+.back-toast { background: #20b486; color: #fff; font-weight: 800; padding: 10px 14px; border-radius: 12px; text-align: center; }

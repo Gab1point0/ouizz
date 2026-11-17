@@ -113,6 +113,8 @@ export type ToPlayers =
   | { t: 'state'; s: PubState }
   | { t: 'media'; key: string; src: string }
   | { t: 'kick'; pid: string }
+  /** même pseudo qu'un joueur déconnecté : le téléphone reprend son identité (points, équipe, réponses) */
+  | { t: 'rejoin'; pid: string; as: string }
   | { t: 'end' };
 
 export type Msg = (ToHost & { from?: 'player' }) | (ToPlayers & { from: 'host' });

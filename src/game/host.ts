@@ -62,6 +62,8 @@ export interface HostSnapshot {
 }
 
 const OFFLINE_AFTER = 12000;
+/** un joueur absent depuis ce délai (2 « ping » manqués) peut être repris par quelqu'un qui tape le même pseudo */
+const RECLAIM_AFTER = 6000;
 const SAVE_KEY = (quizId: string) => `ouizz.host.${quizId}`;
 
 export function newPin(): string {
@@ -209,6 +211,15 @@ export class HostGame {
       return;
     }
     let name = rawName.trim().slice(0, 20) || 'Joueur';
+    // reconnexion avec le même pseudo (autre appareil, page fermée, données effacées…) : on reprend le joueur déconnecté
+    const key = normalize(name);
+    const back = this.activePlayers
+      .filter((x) => normalize(x.name) === key && Date.now() - x.lastSeen > RECLAIM_AFTER)
+      .sort((a, b) => b.score - a.score)[0];
+    if (back) {
+      this.send({ from: 'host', t: 'rejoin', pid, as: back.pid });
+      return;
+    }
     const taken = new Set(this.activePlayers.map((x) => x.name.toLowerCase()));
     if (taken.has(name.toLowerCase())) {
       let k = 2;

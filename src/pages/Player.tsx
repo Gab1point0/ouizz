@@ -23,6 +23,7 @@ export function PlayerPage({ pin: initialPin, local, autoJoin }: { pin?: string;
   const [pin, setPin] = useState(initialPin ?? '');
   const saved = (() => { try { return initialPin ? (JSON.parse(idStore(local).getItem(meKey(initialPin)) ?? 'null') as Me | null) : null; } catch { return null; } })();
   // aperçu depuis l'éditeur : on rejoint tout de suite, sans formulaire ni mémorisation du pseudo
+  const [back, setBack] = useState(false);
   const [me, setMe] = useState<Me | null>(saved ?? (autoJoin && initialPin ? { pid: uid(10), name: autoJoin, avatar: AVATARS[0] } : null));
 
   if (!me || !pin) {
@@ -37,7 +38,13 @@ export function PlayerPage({ pin: initialPin, local, autoJoin }: { pin?: string;
       if (p !== initialPin) history.replaceState(null, '', `#/j/${p}${local ? '?l=1' : ''}`);
     }} />;
   }
-  return <PlayerGame pin={pin} me={me} local={local} onLeave={() => { try { idStore(local).removeItem(meKey(pin)); } catch { /* ignore */ } setMe(null); }} />;
+  const adopt = (pid: string) => {
+    const m: Me = { ...me, pid };
+    try { idStore(local).setItem(meKey(pin), JSON.stringify(m)); } catch { /* ignore */ }
+    setBack(true);
+    setMe(m);
+  };
+  return <PlayerGame pin={pin} me={me} local={local} back={back} onAdopt={adopt} onLeave={() => { try { idStore(local).removeItem(meKey(pin)); } catch { /* ignore */ } setMe(null); }} />;
 }
 
 function JoinForm({ pin: p0, onJoin }: { pin: string; onJoin: (pin: string, name: string, avatar: string) => void }) {
@@ -76,7 +83,7 @@ function JoinForm({ pin: p0, onJoin }: { pin: string; onJoin: (pin: string, name
   );
 }
 
-function PlayerGame({ pin, me, local, onLeave }: { pin: string; me: Me; local: boolean; onLeave: () => void }) {
+function PlayerGame({ pin, me, local, onLeave, onAdopt, back }: { pin: string; me: Me; local: boolean; onLeave: () => void; onAdopt: (pid: string) => void; back?: boolean }) {
   const [st, setSt] = useState<PubState | null>(null);
   const [status, setStatus] = useState<NetStatus>('connecting');
   const [media, setMedia] = useState<Record<string, string>>({});
@@ -89,6 +96,8 @@ function PlayerGame({ pin, me, local, onLeave }: { pin: string; me: Me; local: b
   const mediaRef = useRef(media);
   mediaRef.current = media;
   const lastPhase = useRef('');
+  const [showBack, setShowBack] = useState(!!back);
+  useEffect(() => { if (!back) return; setShowBack(true); const t = setTimeout(() => setShowBack(false), 6000); return () => clearTimeout(t); }, [back, me.pid]);
 
   useEffect(() => {
     const t = openTransport(pin, local);
@@ -111,6 +120,8 @@ function PlayerGame({ pin, me, local, onLeave }: { pin: string; me: Me; local: b
         if (missing.length) t.send({ t: 'need', pid: me.pid, keys: missing });
       } else if (m.t === 'media') {
         setMedia((x) => ({ ...x, [m.key]: m.src }));
+      } else if (m.t === 'rejoin' && m.pid === me.pid) {
+        onAdopt(m.as);
       } else if (m.t === 'kick' && m.pid === me.pid) {
         setKicked(true);
         t.close();
@@ -166,6 +177,7 @@ function PlayerGame({ pin, me, local, onLeave }: { pin: string; me: Me; local: b
     <Styled look={look} attrs={{ 'data-phase': st?.phase, 'data-qtype': st?.q?.type }}>
       <div key={screenKey} className={`phone tr-${look.transition}`} style={{ maxWidth: 560, margin: '0 auto' }}>
         {look.logo && <img src={look.logo} alt="" className="stage-logo" style={{ alignSelf: 'center', maxHeight: 40 }} />}
+        {showBack && <div className="back-toast anim-pop">🎉 Bon retour ! Tu reprends ta partie avec tes points.</div>}
         {children}
       </div>
     </Styled>
