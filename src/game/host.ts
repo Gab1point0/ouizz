@@ -1,6 +1,7 @@
 // Moteur de partie côté animateur : il fait autorité (états, chronos, points).
 // Les téléphones ne font qu'afficher l'état reçu et envoyer leurs réponses.
 
+import { zonesOf } from '../zones';
 import { cleanQuestion, isScored, QT } from '../qtypes';
 import { computePoints, grade } from '../scoring';
 import type { AnswerPayload, GameSettings, Question, Quiz } from '../types';
@@ -579,7 +580,7 @@ export class HostGame {
       case 'type': r.accepted = q.accepted; break;
       case 'order': r.order = (q.items ?? []).map((x) => x.id); break;
       case 'slider': r.sliderCorrect = q.slider?.correct; break;
-      case 'pin': r.zone = q.zone; break;
+      case 'pin': r.zones = zonesOf(q); break;
       case 'match': {
         const inv: Record<string, string> = {};
         for (const [pub, pair] of Object.entries(this.s.shuf[q.id]?.rightToPair ?? {})) inv[pair] = pub;

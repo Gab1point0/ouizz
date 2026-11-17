@@ -6,6 +6,8 @@ import type { Question } from '../types';
 import { normalize, parseBlanks } from '../util';
 import { labelFor, tile, TileLabel, useLook } from '../style';
 import { answerColor } from './common';
+import { ZoneShapes } from './ZoneShapes';
+import { zonesOf } from '../zones';
 import { MediaView, type PlayerControl } from './MediaPlayer';
 
 interface Props { game: HostGame; q: Question; pq: PubQuestion; reveal: boolean }
@@ -156,11 +158,11 @@ function SliderDots({ game, q, reveal }: Props) {
 }
 
 function PinDots({ game, q, reveal }: Props) {
-  const z = q.zone;
+  const zs = zonesOf(q);
   return (
     <div className="pin-img" style={{ width: 'min(900px, 100%)', maxHeight: '60vh' }}>
       <img src={q.media?.src} alt="" style={{ maxHeight: '60vh', objectFit: 'contain' }} />
-      {reveal && z && <span className="pin-zone anim-pop" style={{ left: `${z.x * 100}%`, top: `${z.y * 100}%`, width: `${z.r * 200}%`, aspectRatio: '1' }} />}
+      {reveal && zs.length > 0 && <ZoneShapes zones={zs} className="anim-pop" />}
       {answers(game, q).map(([pid, r], i) => {
         const p = r.a as { x: number; y: number };
         return <span key={pid} className="pin-dot anim-pop" title={nameOf(game, pid)} style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, background: answerColor(i) }} />;

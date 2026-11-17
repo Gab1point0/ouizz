@@ -7,7 +7,9 @@ import { getQuiz, saveQuiz } from '../storage';
 import { themeStyle } from '../themes';
 import { AppearanceEditor, ColorField } from '../components/Appearance';
 import { DECOS, LookProvider, qlookOf, resolveLook, tile, TileLabel, TRANSITIONS } from '../style';
-import type { DecoId, Media, QType, Question, QuestionLook, Quiz, TransitionId } from '../types';
+import type { DecoId, Media, QType, Question, QuestionLook, Quiz, TransitionId, Zone } from '../types';
+import { ZoneShapes } from '../components/ZoneShapes';
+import { polyArea, simplify, zonesOf } from '../zones';
 import { parseBlanks, pickFile, uid } from '../util';
 
 export function EditorPage({ quizId }: { quizId: string }) {
@@ -244,28 +246,113 @@ function VideoOptions({ media, set }: { media: Media; set: (m?: Media) => void }
   );
 }
 
+type ZoneTool = 'circle' | 'rect' | 'poly' | 'free';
+const ZONE_TOOLS: { id: ZoneTool; label: string; help: string }[] = [
+  { id: 'circle', label: '⭕ Cercle', help: 'Clique au centre (ou glisse pour choisir la taille).' },
+  { id: 'rect', label: '▭ Rectangle', help: 'Glisse d’un coin à l’autre.' },
+  { id: 'poly', label: '📐 Point par point', help: 'Clique chaque sommet, segment par segment ; reclique sur le 1er point (ou « Fermer la forme ») pour terminer.' },
+  { id: 'free', label: '✏️ À main levée', help: 'Dessine le contour sans lâcher : la forme se ferme toute seule.' },
+];
+const ZONE_NAMES: Record<string, string> = { circle: 'Cercle', rect: 'Rectangle', poly: 'Forme libre' };
+
 function PinEditor({ q, setQ, upload }: { q: Question; setQ: SetQ; upload: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  const z = q.zone ?? { x: 0.5, y: 0.5, r: 0.1 };
-  const place = (e: React.MouseEvent) => {
+  const zones = zonesOf(q);
+  const [tool, setTool] = useState<ZoneTool>('circle');
+  const [sel, setSel] = useState(zones.length - 1);
+  const [draft, setDraft] = useState<[number, number][]>([]);
+  const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const [ar, setAr] = useState(zones.find((z) => z.ar)?.ar ?? 1);
+  const setZones = (fn: (zs: Zone[]) => Zone[]) => setQ((x) => ({ ...x, zone: undefined, zones: fn(zonesOf(x)) }));
+  const rel = (e: React.PointerEvent): [number, number] => {
     const r = ref.current!.getBoundingClientRect();
-    setQ((x) => ({ ...x, zone: { ...z, x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height, ar: r.height / r.width } }));
+    return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))];
   };
+  const add = (z: Zone) => { setZones((zs) => [...zs, z]); setSel(zones.length); };
+  const replaceLast = (z: Zone) => setZones((zs) => [...zs.slice(0, -1), z]);
+  const closePoly = (pts: [number, number][]) => {
+    if (pts.length >= 3 && polyArea(pts) > 0.0003) add({ shape: 'poly', x: 0, y: 0, r: 0, pts: pts.map(([x, y]) => [+x.toFixed(4), +y.toFixed(4)] as [number, number]), ar });
+    setDraft([]);
+  };
+
+  const down = (e: React.PointerEvent) => {
+    const [x, y] = rel(e);
+    if (tool === 'poly') {
+      if (draft.length >= 3 && Math.hypot(x - draft[0][0], (y - draft[0][1]) * ar) < 0.03) closePoly(draft);
+      else setDraft((d) => [...d, [x, y]]);
+      return;
+    }
+    ref.current!.setPointerCapture(e.pointerId);
+    drag.current = { x, y, moved: false };
+    if (tool === 'free') setDraft([[x, y]]);
+    if (tool === 'circle') add({ shape: 'circle', x, y, r: 0.06, ar });
+    if (tool === 'rect') add({ shape: 'rect', x, y, r: 0, w: 0, h: 0, ar });
+  };
+  const move = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const [x, y] = rel(e);
+    if (Math.hypot(x - d.x, y - d.y) > 0.01) d.moved = true;
+    if (tool === 'free') setDraft((p) => [...p, [x, y]]);
+    if (tool === 'circle' && d.moved) replaceLast({ shape: 'circle', x: d.x, y: d.y, r: Math.max(0.01, Math.hypot(x - d.x, (y - d.y) * ar)), ar });
+    if (tool === 'rect') replaceLast({ shape: 'rect', x: (x + d.x) / 2, y: (y + d.y) / 2, r: 0, w: Math.abs(x - d.x), h: Math.abs(y - d.y), ar });
+  };
+  const up = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    if (tool === 'free') closePoly(simplify(draft));
+    if (tool === 'rect' && !d.moved) replaceLast({ shape: 'rect', x: d.x, y: d.y, r: 0, w: 0.15, h: 0.15 / ar, ar });
+  };
+
   if (!q.media || q.media.kind !== 'image') {
     return <div className="ed-media"><div className="col" style={{ alignItems: 'center' }}><div>Ajoute l’image sur laquelle les joueurs devront placer leur point.</div><button className="btn btn-primary" onClick={upload}>🖼 Choisir une image</button></div></div>;
   }
+  const cur = zones[sel];
   return (
     <div className="col">
-      <div className="small muted">Clique sur l’image pour placer la bonne zone, puis règle sa taille.</div>
-      <div className="pin-img" ref={ref} onClick={place} style={{ maxWidth: 700, alignSelf: 'center', cursor: 'crosshair' }}>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+        {ZONE_TOOLS.map((t) => (
+          <button key={t.id} className={`btn btn-sm ${tool === t.id ? 'btn-primary' : ''}`} onClick={() => { setTool(t.id); setDraft([]); }}>{t.label}</button>
+        ))}
+      </div>
+      <div className="small muted">{ZONE_TOOLS.find((t) => t.id === tool)!.help} Tu peux tracer plusieurs zones : un point dans n’importe laquelle compte juste.</div>
+      <div className="pin-img" ref={ref} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+        style={{ maxWidth: 700, alignSelf: 'center', cursor: 'crosshair' }}>
         <img src={q.media.src} alt="" draggable={false}
-          onLoad={(e) => { const im = e.currentTarget; const ar = im.naturalHeight / im.naturalWidth; if (ar && Math.abs((q.zone?.ar ?? 0) - ar) > 0.01) setQ((x) => ({ ...x, zone: { ...z, ar } })); }} />
-        <span className="pin-zone" style={{ left: `${z.x * 100}%`, top: `${z.y * 100}%`, width: `${z.r * 200}%`, aspectRatio: '1' }} />
+          onLoad={(e) => {
+            const im = e.currentTarget; const a = im.naturalHeight / im.naturalWidth;
+            if (!a) return;
+            setAr(a);
+            if (zones.some((z) => Math.abs((z.ar ?? 0) - a) > 0.01)) setZones((zs) => zs.map((z) => ({ ...z, ar: a })));
+          }} />
+        <ZoneShapes zones={zones} ar={ar} selected={sel} draft={draft} />
+      </div>
+      {tool === 'poly' && draft.length > 0 && (
+        <div className="row">
+          <span className="small muted">{draft.length} point{draft.length > 1 ? 's' : ''}</span>
+          <button className="btn btn-sm" onClick={() => setDraft((d) => d.slice(0, -1))}>↶ Annuler le dernier point</button>
+          <button className="btn btn-sm btn-primary" disabled={draft.length < 3} onClick={() => closePoly(draft)}>✓ Fermer la forme</button>
+          <button className="btn btn-sm btn-ghost" onClick={() => setDraft([])}>Abandonner</button>
+        </div>
+      )}
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+        {zones.map((z, i) => (
+          <span key={i} className={`chip ${i === sel ? 'active' : ''}`} onClick={() => setSel(i)} role="button" style={{ cursor: 'pointer' }}>
+            Zone {i + 1} · {ZONE_NAMES[z.shape ?? 'circle']}
+            <button className="btn btn-sm btn-ghost" title="Supprimer cette zone" onClick={(e) => { e.stopPropagation(); setZones((zs) => zs.filter((_, k) => k !== i)); setSel(-1); }}>✕</button>
+          </span>
+        ))}
+        {zones.length === 0 && <span className="small muted">Aucune zone : trace la bonne réponse sur l’image.</span>}
       </div>
       <div className="row">
-        <label className="field grow">Taille de la zone
-          <input type="range" min={0.02} max={0.4} step={0.01} value={z.r} onChange={(e) => setQ((x) => ({ ...x, zone: { ...z, r: Number(e.target.value) } }))} />
-        </label>
+        {cur && (cur.shape ?? 'circle') === 'circle' && (
+          <label className="field grow">Taille du cercle {sel + 1}
+            <input type="range" min={0.01} max={0.5} step={0.005} value={cur.r} onChange={(e) => { const r = Number(e.target.value); setZones((zs) => zs.map((z, k) => (k === sel ? { ...z, r } : z))); }} />
+          </label>
+        )}
+        <span className="spacer" />
+        {zones.length > 1 && <button className="btn btn-sm btn-ghost" onClick={() => { setZones(() => []); setSel(-1); }}>Tout effacer</button>}
         <button className="btn btn-sm" onClick={upload}>Changer l’image</button>
       </div>
     </div>

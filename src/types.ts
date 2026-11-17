@@ -27,7 +27,8 @@ export interface Item { id: string; text: string }
 export interface Pair { id: string; left: string; right: string }
 export interface Category { id: string; name: string }
 export interface CatItem { id: string; text: string; cat: string }
-export interface Zone { x: number; y: number; r: number; ar?: number } // x, y relatifs (0..1) ; r relatif à la largeur ; ar = hauteur/largeur de l'image
+// x, y relatifs (0..1) ; r relatif à la largeur ; ar = hauteur/largeur de l'image ; rect : w, h ; poly : pts (voir zones.ts)
+export interface Zone { shape?: 'circle' | 'rect' | 'poly'; x: number; y: number; r: number; w?: number; h?: number; pts?: [number, number][]; ar?: number }
 
 export interface SliderCfg { min: number; max: number; step: number; correct: number; margin: number; unit?: string }
 
@@ -63,6 +64,8 @@ export interface Question {
   slider?: SliderCfg;
   // pin
   zone?: Zone;
+  /** plusieurs zones correctes (prioritaire sur zone) */
+  zones?: Zone[];
   // match
   pairs?: Pair[];
   // categorize

@@ -1,3 +1,4 @@
+import { zoneOk, zonesOf } from './zones';
 import type { QType, Question } from './types';
 import { uid } from './util';
 
@@ -172,6 +173,7 @@ export function questionProblems(q: Question): string[] {
     }
     case 'pin':
       if (!q.media || q.media.kind !== 'image') p.push('Ajoute une image et place la zone correcte.');
+      else if (!zonesOf(q).some(zoneOk)) p.push('Trace au moins une zone correcte (une forme libre a besoin d’au moins 3 points).');
       break;
     case 'match':
       if ((q.pairs ?? []).filter((x) => x.left.trim() && x.right.trim()).length < 2) p.push('Il faut au moins 2 paires complètes.');

@@ -1,5 +1,6 @@
 import type { AnswerPayload, Question } from './types';
 import { normalize, parseBlanks, textMatches } from './util';
+import { inAnyZone, zonesOf } from './zones';
 
 /**
  * Note d'une réponse entre 0 et 1 (fraction de la réussite), ou null pour une question non notée.
@@ -46,10 +47,8 @@ export function grade(q: Question, a: AnswerPayload | undefined): number | null 
       return Math.max(0, Math.round(f * 100) / 100);
     }
     case 'pin': {
-      const z = q.zone;
-      if (!z || typeof a !== 'object' || a === null || !('x' in a)) return 0;
-      const p = a as { x: number; y: number };
-      return Math.hypot(p.x - z.x, (p.y - z.y) * (z.ar ?? 1)) <= z.r ? 1 : 0;
+      if (typeof a !== 'object' || a === null || !('x' in a)) return 0;
+      return inAnyZone(zonesOf(q), a as { x: number; y: number }) ? 1 : 0;
     }
     case 'match': {
       const pairs = q.pairs ?? [];

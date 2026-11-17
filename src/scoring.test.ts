@@ -50,6 +50,16 @@ describe('grade', () => {
     expect(grade(q, { x: 0.5, y: 0.68 })).toBe(1); // 0.18 * 0.5 = 0.09 < 0.1
     expect(grade(q, { x: 0.5, y: 0.75 })).toBe(0);
   });
+  it('point sur image : rectangle, forme libre, plusieurs zones', () => {
+    const q = base({ type: 'pin', zones: [
+      { shape: 'rect', x: 0.2, y: 0.2, r: 0, w: 0.2, h: 0.1 },
+      { shape: 'poly', x: 0, y: 0, r: 0, pts: [[0.5, 0.5], [0.9, 0.5], [0.5, 0.9]] }, // triangle
+    ] });
+    expect(grade(q, { x: 0.29, y: 0.24 })).toBe(1);
+    expect(grade(q, { x: 0.31, y: 0.2 })).toBe(0);
+    expect(grade(q, { x: 0.6, y: 0.6 })).toBe(1);
+    expect(grade(q, { x: 0.8, y: 0.8 })).toBe(0); // hors du triangle (au-delà de l'hypoténuse)
+  });
   it('paires, catégories, trous', () => {
     const m = base({ type: 'match', pairs: [{ id: 'p1', left: 'a', right: 'b' }, { id: 'p2', left: 'c', right: 'd' }], partial: true });
     expect(grade(m, { p1: 'p1', p2: 'p2' })).toBe(1);

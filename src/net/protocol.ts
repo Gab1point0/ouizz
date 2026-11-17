@@ -40,6 +40,7 @@ export interface PubReveal {
   order?: string[];
   sliderCorrect?: number;
   zone?: Zone;
+  zones?: Zone[];
   /** match : id gauche -> id droite */
   matchRight?: Record<string, string>;
   catOf?: Record<string, string>;
