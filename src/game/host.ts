@@ -94,13 +94,16 @@ export class HostGame {
   private lastBeat = 0;
   private sendPending = 0;
   private savePending = 0;
+  /** aperçu depuis l'éditeur : rien n'est sauvegardé */
+  private preview = false;
   private mediaCache = new Map<string, Promise<string>>();
   private revealPending = 0;
   /** évènements ponctuels pour l'interface (réactions, sons) */
   onReact: (pid: string, e: string) => void = () => {};
   onEvent: (e: 'join' | 'answer' | 'buzz' | 'tick' | 'reveal' | 'start') => void = () => {};
 
-  constructor(quiz: Quiz, settings: GameSettings, transport: Transport, opts: { pin: string; local: boolean; resume?: HostSnapshot }) {
+  constructor(quiz: Quiz, settings: GameSettings, transport: Transport, opts: { pin: string; local: boolean; resume?: HostSnapshot; preview?: boolean }) {
+    this.preview = !!opts.preview;
     this.quiz = quiz;
     this.qs = Object.fromEntries(quiz.questions.map((q) => [q.id, cleanQuestion(q)]));
     this.t = transport;
@@ -138,7 +141,7 @@ export class HostGame {
   }
 
   private save() {
-    if (this.savePending) return;
+    if (this.savePending || this.preview) return;
     this.savePending = window.setTimeout(() => {
       this.savePending = 0;
       this.s.savedAt = Date.now();

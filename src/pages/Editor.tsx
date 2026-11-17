@@ -1,4 +1,5 @@
 // Éditeur de quiz : liste des questions à gauche, question au centre, réglages à droite.
+import { PreviewModal } from '../components/PreviewModal';
 import { CropModal, cropPoint, type CropRect } from '../components/CropModal';
 import { Grip, Sortable } from '../components/Sortable';
 import { plain } from '../components/Rich';
@@ -46,6 +47,7 @@ export function EditorPage({ quizId }: { quizId: string }) {
   }, [saved]);
 
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   if (!quiz) return <div className="app" style={themeStyle()}><div className="page"><div className="spinner" /></div></div>;
 
   const q = quiz.questions[sel];
@@ -92,8 +94,10 @@ export function EditorPage({ quizId }: { quizId: string }) {
         <button className="btn" onClick={() => setLookOpen(true)}>🎨 Apparence</button>
         <span className="spacer" />
         <span className="small muted">{saved ? '✓ Enregistré' : 'Enregistrement…'}</span>
+        <button className="btn" disabled={!quiz.questions.length} title="Voir le grand écran et le téléphone d’un joueur sur cette question" onClick={async () => { clearTimeout(timer.current); await saveQuiz(quiz); setSaved(true); setPreviewOpen(true); }}>👁 Aperçu</button>
         <button className="btn btn-primary" disabled={!quiz.questions.length} onClick={async () => { clearTimeout(timer.current); await saveQuiz(quiz); go(`/run/${quiz.id}`); }}>▶ Jouer</button>
       </div>
+      {previewOpen && <PreviewModal quizId={quiz.id} titles={quiz.questions.map((x) => x.title)} start={sel} onClose={() => setPreviewOpen(false)} />}
       <div className="editor">
         <div className="ed-list">
           {quiz.questions.map((x, i) => {

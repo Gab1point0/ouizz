@@ -15,14 +15,28 @@ import { themeStyle } from '../themes';
 import { DEFAULT_SETTINGS, type GameSettings, type Quiz } from '../types';
 import { download, uid } from '../util';
 
-export function HostPage({ quizId }: { quizId: string }) {
+export function HostPage({ quizId, preview }: { quizId: string; preview?: { pin: string; q: number } }) {
   const [quiz, setQuiz] = useState<Quiz | null | undefined>(undefined);
   const [game, setGame] = useState<HostGame | null>(null);
   useEffect(() => { getQuiz(quizId).then((q) => setQuiz(q ?? null)); }, [quizId]);
   useEffect(() => () => { game?.destroy(); stopMusic(); }, [game]);
+  // aperçu (éditeur) : mode test, son coupé, ordre d'origine, ouverture directe sur la question demandée
+  useEffect(() => {
+    if (!preview || !quiz || game || !quiz.questions.length) return;
+    const settings: GameSettings = { ...DEFAULT_SETTINGS, ...quiz.settings, shuffleQuestions: false, sounds: false, music: false };
+    setSoundEnabled(false);
+    setMusicEnabled(false);
+    setSoundPack(quiz.style?.soundPack);
+    const g = new HostGame(quiz, settings, openTransport(preview.pin, true), { pin: preview.pin, local: true, preview: true });
+    g.start();
+    const q = Math.max(0, Math.min(quiz.questions.length - 1, preview.q));
+    if (q > 0) g.goTo(q);
+    setGame(g);
+  }, [preview, quiz, game]);
 
   if (quiz === undefined) return <div className="app"><div className="page">Chargement…</div></div>;
   if (quiz === null) return <div className="app" style={themeStyle()}><div className="page">Quiz introuvable. <a href="#/host">Retour</a></div></div>;
+  if (!game && preview) return <div className="app" style={themeStyle(quiz.theme)}><div className="page">Préparation de l’aperçu…</div></div>;
   if (!game) {
     return <Setup quiz={quiz} onStart={(settings, local, resume) => {
       const pin = resume?.pin ?? newPin();

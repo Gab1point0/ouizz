@@ -17,8 +17,11 @@ export function App() {
   switch (page) {
     case 'host': return <LibraryPage />;
     case 'edit': return <EditorPage key={arg} quizId={arg} />;
-    case 'run': return <HostPage key={arg} quizId={arg} />;
-    case 'j': return <PlayerPage key={arg} pin={arg} local={local} />;
+    case 'run': {
+      const pv = query.get('preview');
+      return <HostPage key={`${arg}-${pv ?? ''}`} quizId={arg} preview={pv ? { pin: pv, q: Number(query.get('q') ?? 0) } : undefined} />;
+    }
+    case 'j': return <PlayerPage key={arg} pin={arg} local={local} autoJoin={query.get('apercu') === '1' ? 'Aperçu' : undefined} />;
     default: return <PlayerPage local={local} />;
   }
 }

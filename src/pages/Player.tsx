@@ -19,10 +19,11 @@ const meKey = (pin: string) => `ouizz.me.${pin}`;
 const idStore = (local: boolean): Storage => (local ? sessionStorage : localStorage);
 const lastName = () => { try { return JSON.parse(localStorage.getItem('ouizz.lastme') ?? 'null') as { name: string; avatar: string } | null; } catch { return null; } };
 
-export function PlayerPage({ pin: initialPin, local }: { pin?: string; local: boolean }) {
+export function PlayerPage({ pin: initialPin, local, autoJoin }: { pin?: string; local: boolean; autoJoin?: string }) {
   const [pin, setPin] = useState(initialPin ?? '');
   const saved = (() => { try { return initialPin ? (JSON.parse(idStore(local).getItem(meKey(initialPin)) ?? 'null') as Me | null) : null; } catch { return null; } })();
-  const [me, setMe] = useState<Me | null>(saved);
+  // aperçu depuis l'éditeur : on rejoint tout de suite, sans formulaire ni mémorisation du pseudo
+  const [me, setMe] = useState<Me | null>(saved ?? (autoJoin && initialPin ? { pid: uid(10), name: autoJoin, avatar: AVATARS[0] } : null));
 
   if (!me || !pin) {
     return <JoinForm pin={pin} onJoin={(p, name, avatar) => {
