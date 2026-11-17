@@ -1,4 +1,5 @@
 // Quiz enregistrés dans ce navigateur (IndexedDB : beaucoup de place, images comprises).
+import { isKahoot, kahootToQuiz } from './kahoot';
 import { createStore, del, get, keys, set } from 'idb-keyval';
 import { queueDelete, queuePut } from './cloud';
 import type { Quiz } from './types';
@@ -48,6 +49,11 @@ export function exportQuizzes(qs: Quiz[]): string {
 
 export async function importQuizzes(text: string): Promise<Quiz[]> {
   const data = JSON.parse(text);
+  if (isKahoot(data)) {
+    const { quiz } = kahootToQuiz(data);
+    await saveQuiz(quiz);
+    return [quiz];
+  }
   const list: Quiz[] = Array.isArray(data) ? data : data.quizzes ?? (data.questions ? [data] : []);
   const out: Quiz[] = [];
   for (const q of list) {

@@ -1,4 +1,5 @@
 // Saisie des réponses sur le téléphone, un composant par type de question.
+import { Rich } from './Rich';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PubQuestion } from '../net/protocol';
 import type { AnswerPayload } from '../types';
@@ -59,7 +60,7 @@ function ChoiceInput({ q, media, showText, onSubmit }: Props) {
           <button key={a.id} className={`ans anim-pop d${i + 1} ${sel.includes(a.id) ? 'sel' : ''}`} style={tile(i)} onClick={() => click(a.id)}>
             <TileLabel i={i} />
             {a.imageKey && media[a.imageKey] && <img src={media[a.imageKey]} alt="" />}
-            {showText && a.text && <span>{a.text}</span>}
+            {showText && a.text && <span><Rich text={a.text} /></span>}
           </button>
         ))}
       </div>
@@ -131,7 +132,7 @@ export function SortableList({ items, onChange }: { items: { id: string; text: s
         <div key={it.id} ref={(el) => { refs.current[it.id] = el; }} className={`sort-item ${drag === it.id ? 'dragging' : ''}`}
           onPointerDown={(e) => { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); if ((e.target as HTMLElement).tagName !== 'BUTTON') setDrag(it.id); }}>
           <span className="num">{i + 1}</span>
-          <span className="grow">{it.text}</span>
+          <span className="grow"><Rich text={it.text} /></span>
           <button className="btn btn-sm icon-btn" onClick={() => move(i, i - 1)} disabled={i === 0}>▲</button>
           <button className="btn btn-sm icon-btn" onClick={() => move(i, i + 1)} disabled={i === items.length - 1}>▼</button>
         </div>

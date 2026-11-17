@@ -1,4 +1,5 @@
 // Affichage des résultats d'une question sur le grand écran, un rendu par type.
+import { Rich } from './Rich';
 import { useMemo } from 'react';
 import type { HostGame } from '../game/host';
 import type { PubQuestion } from '../net/protocol';
@@ -50,7 +51,7 @@ function ChoiceBars({ game, q, pq, reveal }: Props) {
           <div key={a.id} className="bar" style={{ opacity: dim ? 0.35 : 1 }}>
             <div className="n">{counts[a.id]}{ok && ' ✔'}</div>
             <div className="fill anim-rise" style={{ height: `${(counts[a.id] / max) * 80}%`, background: answerColor(i) }} />
-            <div className="center small" style={{ fontWeight: 700 }}>{labelFor(i, look)}{labelFor(i, look) && a.text ? ' · ' : ''}{a.text}</div>
+            <div className="center small" style={{ fontWeight: 700 }}>{labelFor(i, look)}{labelFor(i, look) && a.text ? ' · ' : ''}<Rich text={a.text} /></div>
           </div>
         );
       })}
@@ -160,8 +161,8 @@ function SliderDots({ game, q, reveal }: Props) {
 function PinDots({ game, q, reveal }: Props) {
   const zs = zonesOf(q);
   return (
-    <div className="pin-img" style={{ width: 'min(900px, 100%)', maxHeight: '60vh' }}>
-      <img src={q.media?.src} alt="" style={{ maxHeight: '60vh', objectFit: 'contain' }} />
+    <div className="pin-img" style={{ width: 'fit-content', maxWidth: 'min(900px, 100%)', margin: '0 auto' }}>
+      <img src={q.media?.src} alt="" style={{ maxHeight: '60vh', width: 'auto', maxWidth: '100%', display: 'block' }} />
       {reveal && zs.length > 0 && <ZoneShapes zones={zs} className="anim-pop" />}
       {answers(game, q).map(([pid, r], i) => {
         const p = r.a as { x: number; y: number };
@@ -176,7 +177,7 @@ function Solution({ game, q }: Props) {
   const full = list.filter(([, r]) => (r.f ?? 0) >= 0.999).length;
   const avg = list.length ? Math.round((list.reduce((a, [, r]) => a + (r.f ?? 0), 0) / list.length) * 100) : 0;
   let body: React.ReactNode = null;
-  if (q.type === 'order') body = <ol style={{ fontSize: '1.4em', fontWeight: 700 }}>{(q.items ?? []).map((x) => <li key={x.id} className="anim-slide">{x.text}</li>)}</ol>;
+  if (q.type === 'order') body = <ol style={{ fontSize: '1.4em', fontWeight: 700 }}>{(q.items ?? []).map((x) => <li key={x.id} className="anim-slide"><Rich text={x.text} /></li>)}</ol>;
   if (q.type === 'match') body = <div className="col">{(q.pairs ?? []).map((p, i) => <div key={p.id} className="row anim-slide" style={{ fontSize: '1.3em', fontWeight: 700 }}><span className="chip" style={{ background: answerColor(i), color: '#fff' }}>{p.left}</span> ⟷ <span>{p.right}</span></div>)}</div>;
   if (q.type === 'categorize') body = (
     <div className="row" style={{ alignItems: 'flex-start', justifyContent: 'center' }}>
@@ -327,7 +328,7 @@ export function StageAnswers({ q, pq }: { q: Question; pq: PubQuestion }) {
             <div key={a.id} className={`ans anim-pop d${i + 1}`} style={tile(i)}>
               <TileLabel i={i} />
               {full?.image && <img src={full.image} alt="" />}
-              <span>{a.text}</span>
+              <span><Rich text={a.text} /></span>
             </div>
           );
         })}
@@ -367,6 +368,6 @@ export function StageAnswers({ q, pq }: { q: Question; pq: PubQuestion }) {
 }
 
 export function StageMedia({ q, control }: { q: Question; control?: PlayerControl }) {
-  if (!q.media) return null;
+  if (!q.media) return q.speech ? <div className="speech-badge anim-pop" title="Lecture à voix haute"><span>🗣️</span><span className="eq"><i /><i /><i /><i /></span></div> : null;
   return <MediaView media={q.media} control={control} />;
 }

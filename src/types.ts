@@ -37,6 +37,8 @@ export interface Question {
   type: QType;
   title: string;
   media?: Media;
+  /** lecture à voix haute au début de la question (synthèse vocale) */
+  speech?: { text: string; lang: string };
   /** secondes ; 0 = pas de limite */
   time: number;
   /** multiplicateur de points : 0 = sans points, 1 = normal, 2 = double */

@@ -1,4 +1,6 @@
 // Grand écran de l'animateur : préparation, salle d'attente (QR code), questions, résultats, podium.
+import { speak, stopSpeaking } from '../speech';
+import { Rich } from '../components/Rich';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { appUrl, Confetti, go, QR, ReactionsLayer, Timer, type FloatingReaction } from '../components/common';
 import { qlookOf, resolveLook, Styled } from '../style';
@@ -166,6 +168,17 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
   const [restartKey, setRestartKey] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
   useEffect(() => { setUserPaused(false); setShowVideo(false); }, [s.idx]);
+
+  // ---- lecture à voix haute : une fois quand la question s'affiche ----
+  const spokenIdx = useRef(-1);
+  useEffect(() => {
+    if ((s.phase === 'ready' || s.phase === 'question') && q?.speech && spokenIdx.current !== s.idx && sound) {
+      spokenIdx.current = s.idx;
+      speak(q.speech.text, q.speech.lang);
+    }
+    if (s.phase !== 'ready' && s.phase !== 'question') stopSpeaking();
+  }, [s.phase, s.idx, q, sound]);
+  useEffect(() => () => stopSpeaking(), []);
   const hasVideo = q?.media?.kind === 'video';
   const buzzing = q?.type === 'buzzer' && (s.buzz.queue.length > 0 || !!s.buzz.winner);
   // pause : bouton de l'animateur, pause de la partie, ou quelqu'un a buzzé (reprend si sa réponse est fausse)
@@ -204,6 +217,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
           {q?.media?.audioOnly && <button className="btn btn-sm" onClick={() => setShowVideo((x) => !x)}>{showVideo ? '🙈 Cacher la vidéo' : '👁 Montrer la vidéo'}</button>}
         </>
       )}
+      {(s.phase === 'question' || s.phase === 'ready') && q?.speech && <button className="btn btn-sm" onClick={() => speak(q.speech!.text, q.speech!.lang)}>🗣 Réécouter</button>}
       {(s.phase === 'question' || s.phase === 'ready') && q?.type !== 'slide' && (
         <>
           {(s.endsAt > 0 || s.pausedLeft !== undefined) && <button className="btn btn-sm" onClick={() => game.togglePause()}>{s.pausedLeft !== undefined ? '▶ Reprendre' : '⏸ Pause'}</button>}
@@ -269,7 +283,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
             <div className="stage-body col" style={{ flexDirection: 'column' }}>
               <div className="anim-pop" style={{ fontSize: '4em' }}>{QT[q.type].icon}</div>
               <div className="chip anim-slide" style={{ fontSize: '1.2em' }}>{QT[q.type].label}</div>
-              <div className="stage-title anim-slide d2" style={{ maxWidth: 1100 }}>{q.title}</div>
+              <div className="stage-title anim-slide d2" style={{ maxWidth: 1100 }}><Rich text={q.title} /></div>
               <Timer endsAt={s.endsAt} total={total} paused={s.pausedLeft} size={80} />
             </div>
             {controls}
@@ -287,10 +301,10 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
               {q.type !== 'slide' && q.type !== 'buzzer' && <div className="counter"><b>{Object.keys(game.currentAnswers).length}</b>réponse{Object.keys(game.currentAnswers).length > 1 ? 's' : ''} / {online.length}</div>}
               {(s.endsAt > 0 || s.pausedLeft !== undefined) && <Timer endsAt={s.endsAt} total={total} paused={s.pausedLeft} />}
             </div>
-            {(q.title || q.type !== 'slide') && <div className="stage-title anim-down">{q.title}</div>}
+            {(q.title || q.type !== 'slide') && <div className="stage-title anim-down"><Rich text={q.title} /></div>}
             <div className={`stage-body layout-${look.layout}`}>
               <StageMedia q={q} control={mediaControl} />
-              {q.type === 'slide' && q.body && <div className="card anim-slide" style={{ fontSize: '1.5em', whiteSpace: 'pre-wrap', maxWidth: 1100 }}>{q.body}</div>}
+              {q.type === 'slide' && q.body && <div className="card anim-slide" style={{ fontSize: '1.5em', whiteSpace: 'pre-wrap', maxWidth: 1100 }}><Rich text={q.body} /></div>}
               {q.type === 'buzzer' ? (
                 <BuzzPanel game={game} showAnswer={showAnswer} onToggle={() => setShowAnswer((x) => !x)} />
               ) : ['poll', 'wordcloud', 'open', 'scale', 'ranking', 'points100'].includes(q.type) && Object.keys(game.currentAnswers).length > 0 ? (
@@ -316,7 +330,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
               <span className="spacer" />
               <div className="counter"><b>{Object.keys(game.answersFor(q.id)).length}</b>réponses</div>
             </div>
-            <div className="stage-title">{q.title}</div>
+            <div className="stage-title"><Rich text={q.title} /></div>
             <div className="stage-body" style={{ flexDirection: 'column' }}>
               {q.media?.kind === 'video' && q.media.audioOnly && q.media.revealVideo && <MediaView media={{ ...q.media, audioOnly: false }} />}
               <Results game={game} q={q} pq={pq} reveal />

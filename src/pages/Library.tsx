@@ -1,4 +1,5 @@
 // Accueil de l'animateur : mes quiz, import/export, historique des parties.
+import { plain } from '../components/Rich';
 import { useEffect, useState } from 'react';
 import { cloudState, disableCloud, enableCloud, getCloudKey, newCloudKey, onCloudChange, pull } from '../cloud';
 import { go, Modal } from '../components/common';
@@ -57,7 +58,7 @@ export function LibraryPage() {
         <button className="btn btn-ghost" onClick={() => go('/')}>Rejoindre une partie</button>
         <button className="btn btn-ghost" onClick={() => listReports().then(setReports)}>Historique</button>
         <button className="btn" onClick={() => setCloudOpen(true)} title={cloud.error ?? ''}>{CLOUD_LABEL[cloud.status]}</button>
-        <button className="btn" onClick={importFile}>Importer</button>
+        <button className="btn" onClick={importFile} title="Fichier .ouizz.json, ou un Kahoot converti en JSON">Importer</button>
         <button className="btn" onClick={() => setTextOpen(true)}>Créer depuis du texte</button>
         <button className="btn btn-primary" onClick={create}>+ Nouveau quiz</button>
       </div>
@@ -83,7 +84,7 @@ export function LibraryPage() {
             return (
               <div key={q.id} className="card quiz-card anim-pop" style={{ ...resolveLook(q.theme, q.style).vars, fontFamily: 'var(--font)' }}>
                 <div className="quiz-cover" style={{ background: 'var(--bg)' }}>{cover ? <img src={cover} alt="" /> : '❓'}</div>
-                <b style={{ color: 'var(--fg)' }}>{q.title || 'Sans titre'}</b>
+                <b style={{ color: 'var(--fg)' }}>{plain(q.title) || 'Sans titre'}</b>
                 <div className="small muted">{q.questions.length} question{q.questions.length > 1 ? 's' : ''} · {types}</div>
                 <div className="row">
                   <button className="btn btn-primary grow" onClick={() => go(`/run/${q.id}`)} disabled={!q.questions.length}>▶ Jouer</button>
@@ -157,7 +158,7 @@ function Reports({ reports, onClose, onDelete }: { reports: Report[]; onClose: (
               <div className="col small" style={{ marginTop: 8 }}>
                 <div>🏆 {r.players.slice(0, 3).map((p, i) => `${i + 1}. ${p.avatar} ${p.name} (${p.score})`).join('   ')}</div>
                 <table className="results"><thead><tr><th>Question</th><th>Réponses</th><th>Réussite</th></tr></thead>
-                  <tbody>{r.questions.map((q, i) => <tr key={i}><td>{QT[q.type as keyof typeof QT]?.icon} {q.title}</td><td>{q.answers}</td><td>{q.successRate === null ? '–' : `${Math.round(q.successRate * 100)} %`}</td></tr>)}</tbody></table>
+                  <tbody>{r.questions.map((q, i) => <tr key={i}><td>{QT[q.type as keyof typeof QT]?.icon} {plain(q.title)}</td><td>{q.answers}</td><td>{q.successRate === null ? '–' : `${Math.round(q.successRate * 100)} %`}</td></tr>)}</tbody></table>
                 <div className="row"><span className="spacer" /><button className="btn btn-sm btn-danger" onClick={() => onDelete(r.id)}>Supprimer</button></div>
               </div>
             )}

@@ -1,4 +1,6 @@
 // Éditeur de quiz : liste des questions à gauche, question au centre, réglages à droite.
+import { plain } from '../components/Rich';
+import { hasVoice, speak, SPEECH_LANGS, stopSpeaking } from '../speech';
 import { useEffect, useRef, useState } from 'react';
 import { answerColor, go, MediaView, Modal } from '../components/common';
 import { fileToDataUrl } from '../image';
@@ -41,6 +43,7 @@ export function EditorPage({ quizId }: { quizId: string }) {
     return () => window.removeEventListener('beforeunload', before);
   }, [saved]);
 
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   if (!quiz) return <div className="app" style={themeStyle()}><div className="page"><div className="spinner" /></div></div>;
 
   const q = quiz.questions[sel];
@@ -103,7 +106,7 @@ export function EditorPage({ quizId }: { quizId: string }) {
                 <span className="n">{i + 1}</span>
                 <span style={{ fontSize: '1.3em' }}>{QT[x.type].icon}</span>
                 <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                  {x.title || <i className="muted">{QT[x.type].label}</i>}
+                  {plain(x.title) || <i className="muted">{QT[x.type].label}</i>}
                 </span>
                 {pb.length > 0 && <span className="warn" title={pb.join('\n')}>⚠</span>}
               </div>
@@ -123,8 +126,13 @@ export function EditorPage({ quizId }: { quizId: string }) {
                 <button className="btn btn-sm" onClick={duplicate}>Dupliquer</button>
                 <button className="btn btn-sm btn-danger" onClick={remove}>Supprimer</button>
               </div>
-              <textarea className="textarea ed-title" style={{ background: 'var(--card)', minHeight: 60 }} placeholder={q.type === 'slide' ? 'Titre de la diapositive' : 'Écris ta question ici'} value={q.title} onChange={(e) => setQ((x) => ({ ...x, title: e.target.value }))} />
+              <textarea ref={titleRef} className="textarea ed-title" style={{ background: 'var(--card)', minHeight: 60 }} placeholder={q.type === 'slide' ? 'Titre de la diapositive' : 'Écris ta question ici'} value={q.title} onChange={(e) => setQ((x) => ({ ...x, title: e.target.value }))} />
+              <div className="row small muted" style={{ marginTop: -6 }}>
+                <button className="btn btn-sm btn-ghost" title="Mettre la sélection en gras" onMouseDown={(e) => { e.preventDefault(); boldSelection(titleRef.current, (v) => setQ((x) => ({ ...x, title: v }))); }}><b>G</b> Gras</button>
+                <span>Sélectionne des mots puis « Gras », ou écris **comme ceci** (marche aussi dans les réponses et les diapositives).</span>
+              </div>
               <MediaEditor q={q} setQ={setQ} />
+              <SpeechEditor q={q} setQ={setQ} />
               <TypeEditor q={q} setQ={setQ} />
               {questionProblems(q).map((p) => <div key={p} className="problems">⚠ {p}</div>)}
             </div>
@@ -168,6 +176,36 @@ function TypePicker({ onPick, onClose }: { onPick: (t: QType) => void; onClose: 
 }
 
 type SetQ = (fn: (q: Question) => Question) => void;
+
+/** Entoure la sélection d'un champ de ** (gras). */
+function boldSelection(el: HTMLTextAreaElement | HTMLInputElement | null, set: (v: string) => void) {
+  if (!el) return;
+  const { selectionStart: a, selectionEnd: b, value } = el;
+  if (a === null || b === null || a === b) return;
+  set(value.slice(0, a) + '**' + value.slice(a, b) + '**' + value.slice(b));
+}
+
+function SpeechEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
+  const sp = q.speech;
+  if (q.type === 'pin') return null;
+  if (!sp) return <button className="btn btn-sm btn-ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setQ((x) => ({ ...x, speech: { text: '', lang: 'fr-FR' } }))}>🗣 Ajouter une lecture à voix haute</button>;
+  const set = (p: Partial<NonNullable<Question['speech']>>) => setQ((x) => ({ ...x, speech: { ...sp, ...p } }));
+  return (
+    <div className="card col" style={{ gap: 8 }}>
+      <div className="row"><b className="grow">🗣 Lecture à voix haute</b><button className="btn btn-sm btn-ghost" onClick={() => { stopSpeaking(); setQ((x) => ({ ...x, speech: undefined })); }}>Retirer</button></div>
+      <textarea className="textarea" style={{ minHeight: 60 }} placeholder="Texte lu par le grand écran au début de la question" value={sp.text} onChange={(e) => set({ text: e.target.value })} />
+      <div className="row">
+        <label className="field grow">Voix
+          <select className="input" value={sp.lang} onChange={(e) => set({ lang: e.target.value })}>
+            {SPEECH_LANGS.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+          </select>
+        </label>
+        <button className="btn" onClick={() => speak(sp.text, sp.lang)} disabled={!sp.text.trim()}>▶ Écouter</button>
+      </div>
+      <div className="small muted">Le texte est lu une fois quand la question s’affiche (bouton « Réécouter » pendant la partie). Astuce : un texte français lu avec une voix étrangère, ça marche aussi. {!hasVoice(sp.lang) && '⚠ Cette voix n’est pas installée sur cet appareil : une voix par défaut sera utilisée.'}</div>
+    </div>
+  );
+}
 
 function MediaEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
   const [url, setUrl] = useState('');
