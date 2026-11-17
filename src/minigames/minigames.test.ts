@@ -8,7 +8,7 @@ describe('mini-jeux', () => {
     expect(minigameFractions({ a: 0, b: 0 })).toEqual({ a: 0, b: 0 });
   });
   it('registre complet', () => {
-    expect(MINIGAMES.map((m) => m.id)).toEqual(['67', 'maxime', 'dating', 'flap', 'calcul']);
+    expect(MINIGAMES.map((m) => m.id)).toEqual(['67', 'maxime', 'dating', 'flap', 'calcul', 'belos']);
     expect(grade({ id: 'q', type: 'minigame', title: '', time: 20, points: 1 }, 12)).toBe(1);
   });
 });

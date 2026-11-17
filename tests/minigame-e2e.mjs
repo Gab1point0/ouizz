@@ -26,7 +26,7 @@ try {
     const now = Date.now();
     const q = (id, minigame, time, title) => ({ id, type: 'minigame', minigame, time, title, points: 1 });
     await saveQuiz({ id: 'mgtest', title: 'Test mini-jeux', theme: 'craie', createdAt: now, updatedAt: now,
-      questions: [q('m1', '67', 12, '67 Challenge'), q('m2', 'maxime', 14, 'Maxime pendant l’ellipse'), q('m3', 'dating', 14, 'Clint’s Dating Sim'), q('m4', 'flap', 14, 'Flap Emile'), q('m5', 'calcul', 30, 'Calcul mental')] });
+      questions: [q('m1', '67', 12, '67 Challenge'), q('m2', 'maxime', 14, 'Maxime pendant l’ellipse'), q('m3', 'dating', 14, 'Clint’s Dating Sim'), q('m4', 'flap', 14, 'Flap Emile'), q('m5', 'calcul', 30, 'Calcul mental'), q('m6', 'belos', 14, 'Belos vs Spiders')] });
   });
   await host.goto(`${BASE}#/run/mgtest`, { waitUntil: 'networkidle0' });
   await wf(host, () => document.body.innerText.includes('Options de la partie'));
@@ -51,14 +51,14 @@ try {
   await host.bringToFront();
   await click(host, 'Commencer');
 
-  for (const [i, id] of ['67', 'maxime', 'dating', 'flap', 'calcul'].entries()) {
+  for (const [i, id] of ['67', 'maxime', 'dating', 'flap', 'calcul', 'belos'].entries()) {
     await host.bringToFront();
     await wf(host, () => ['ready', 'question'].includes(document.querySelector('.app')?.dataset.phase));
     if (await host.evaluate(() => document.querySelector('.app')?.dataset.phase === 'ready')) await host.evaluate(() => document.querySelector('.stage-bottom .btn-primary')?.click());
     await wf(host, () => document.querySelector('.app')?.dataset.phase === 'question');
     const [fast, slow] = players;
     await fast.bringToFront();
-    await wf(fast, (id) => !!document.querySelector(id === '67' ? '.mg-hand' : (id === 'maxime' || id === 'flap') ? '.mg-runner canvas' : id === 'calcul' ? '.mc-pad' : '.ds-field'), 10000, id);
+    await wf(fast, (id) => !!document.querySelector(id === '67' ? '.mg-hand' : (id === 'maxime' || id === 'flap' || id === 'belos') ? '.mg-runner canvas' : id === 'calcul' ? '.mc-pad' : '.ds-field'), 10000, id);
     await sleep(3200); // compte à rebours
     if (id === '67') {
       // le joueur rapide tape 40 fois en alternant, le lent 10 fois
@@ -71,6 +71,14 @@ try {
       }
       await fast.bringToFront();
       await fast.screenshot({ path: `${OUT}/mg-67-telephone.png` });
+    } else if (id === 'belos') {
+      // le rapide tourne en rond au joystick (vrai glisser au doigt dans le coin en bas à droite)
+      const box = await (await fast.$('.mg-runner canvas')).boundingBox();
+      const cx = box.x + box.width * (298 / 360), cy = box.y + box.height * (418 / 480), R = box.width * (40 / 360);
+      await fast.mouse.move(cx, cy); await fast.mouse.down();
+      for (let k = 0; k < 60; k++) { await fast.mouse.move(cx + Math.cos(k / 4) * R, cy + Math.sin(k / 4) * R); await new Promise((r) => setTimeout(r, 70)); }
+      await fast.screenshot({ path: `${OUT}/mg-belos-telephone.png` });
+      await fast.mouse.up();
     } else if (id === 'calcul') {
       // le rapide tape 67 dix fois (avec une erreur au début), le lent ne fait que 3 calculs
       for (const [p, n] of [[fast, 10], [slow, 3]]) {
@@ -115,7 +123,7 @@ try {
     console.log(`  ${id} :`, rows.join(' | '));
     check(rows.length === 2, `${id} : 2 scores affichés`);
     if (id !== 'maxime' && id !== 'flap') check(/Rapide/.test(rows[0] ?? ''), `${id} : le meilleur joueur est premier`);
-    if (i < 4) {
+    if (i < 5) {
       for (let k = 0; k < 3; k++) {
         await host.evaluate(() => document.querySelector('.stage-bottom .btn-primary')?.click());
         await sleep(600);

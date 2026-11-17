@@ -7,6 +7,7 @@ import { MaximeRunner } from './MaximeRunner';
 import { DatingSim } from './DatingSim';
 import { FlapEmile } from './FlapEmile';
 import { CalculMental } from './CalculMental';
+import { BelosSpiders } from './BelosSpiders';
 
 export interface MinigameProps {
   /** heure (Date.now) de fin de la question : le jeu s'arrête juste avant et envoie le score */
@@ -58,6 +59,11 @@ export const MINIGAMES: MinigameDef[] = [
     titleParts: ['Calcul mental', 'extrêmement sérieux,', 'attention vraiment ça va être difficile,', 'ne prenez pas cela à la légère'],
     pitch: '10 calculs de plus en plus « difficiles » à résoudre le plus vite possible. Le secret (chut) : ils font TOUS 67, du simple 60 + 7 jusqu’au code ASCII de « C ». 100 pts par calcul + bonus de vitesse.',
     howTo: '10 calculs, de plus en plus difficiles. Répondez le plus vite possible !',
+  },
+  {
+    id: 'belos', name: 'Belos vs Spiders', icon: '🕷️', unit: 'pts', time: 60, Component: BelosSpiders,
+    pitch: 'Belos le spartiate doit survivre dans une grotte : joystick pour esquiver les araignées (petites = rapides), les toiles ralentissent, le verre des potions rouges fait mal au bout de 2 s. 3 vies, 10 pts par seconde.',
+    howTo: 'Esquivez les araignées au joystick ! Toiles = ralenti, verre rouge = sortez vite. 3 vies.',
   },
 ];
 
