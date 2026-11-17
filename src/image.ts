@@ -53,3 +53,20 @@ export async function shrinkDataUrl(src: string, maxChars: number): Promise<stri
   }
   return draw(img, 320, 0.5);
 }
+
+/** Recadre une image (rectangle en fractions 0..1 de l'image) -> data URL (max 1280 px). */
+export async function cropImage(src: string, r: { x: number; y: number; w: number; h: number }, maxDim = 1280): Promise<string> {
+  const img = await loadImage(src);
+  const sx = r.x * img.naturalWidth, sy = r.y * img.naturalHeight;
+  const sw = Math.max(1, r.w * img.naturalWidth), sh = Math.max(1, r.h * img.naturalHeight);
+  const scale = Math.min(1, maxDim / Math.max(sw, sh));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(sw * scale));
+  c.height = Math.max(1, Math.round(sh * scale));
+  const ctx = c.getContext('2d')!;
+  const png = /^data:image\/(png|svg)/.test(src) || /\.png(\?|$)/i.test(src);
+  if (!png) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  // lève une erreur si l'image vient d'un site qui interdit sa copie (canvas « sali »)
+  return png ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.88);
+}

@@ -130,6 +130,18 @@ try {
   await browser.close();
 }
 
+/** Glisser-déposer réel à la souris, du centre de a vers le centre de b. */
+async function dragTo(p, a, b) {
+  const A = await a.boundingBox(), B = await b.boundingBox();
+  const x0 = A.x + A.width / 2, y0 = A.y + A.height / 2, x1 = B.x + B.width / 2, y1 = B.y + B.height / 2;
+  await p.mouse.move(x0, y0);
+  await p.mouse.down();
+  for (let s = 1; s <= 10; s++) await p.mouse.move(x0 + ((x1 - x0) * s) / 10, y0 + ((y1 - y0) * s) / 10);
+  await new Promise((r) => setTimeout(r, 120));
+  await p.mouse.up();
+  await new Promise((r) => setTimeout(r, 250));
+}
+
 async function answer(p, type, i) {
   const clickSubmit = async () => {
     await p.evaluate(() => {
@@ -157,7 +169,14 @@ async function answer(p, type, i) {
     }
     case 'vote': { const items = await p.$$('.phone-main .sort-item'); if (items.length) await items[i % items.length].click(); await clickSubmit(); break; }
     case 'order': case 'ranking': {
-      if (i % 2) { const downs = await p.$$('.sort-item button:last-child'); if (downs[0]) await downs[0].click(); }
+      if (i % 2) {
+        // vrai glisser-déposer : le 1er élément est déplacé tout en bas
+        const items = await p.$$('.phone-main .sort-item');
+        const before = await p.$$eval('.phone-main .sort-item', (els) => els.map((e) => e.innerText));
+        await dragTo(p, items[0], items[items.length - 1]);
+        const after = await p.$$eval('.phone-main .sort-item', (els) => els.map((e) => e.innerText));
+        if (after[after.length - 1].replace(/^\d+/, '') !== before[0].replace(/^\d+/, '')) throw new Error(`glisser-déposer (ordre) sans effet : ${after.join(' | ')}`);
+      }
       await clickSubmit();
       break;
     }
@@ -172,13 +191,22 @@ async function answer(p, type, i) {
     case 'match': {
       const all = await p.$$('.phone-main .sort-item');
       const n = all.length / 2;
-      for (let k = 0; k < n; k++) { await all[k].click(); await all[n + ((k + i) % n)].click(); }
+      // une paire sur deux par glisser-déposer, l'autre en touchant l'un puis l'autre
+      for (let k = 0; k < n; k++) {
+        const target = all[n + ((k + i) % n)];
+        if (k % 2 === 0) await dragTo(p, all[k], target); else { await all[k].click(); await target.click(); }
+      }
       await clickSubmit();
       break;
     }
     case 'categorize': {
-      const cards = await p.$$('.phone-main .card');
-      for (let k = 0; k < cards.length; k++) { const b = await cards[k].$$('button'); await b[(k + i) % b.length].click(); }
+      const buckets = await p.$$('.phone-main .cat-bucket');
+      for (let k = 0; ; k++) {
+        const chips = await p.$$('.phone-main .cat-pool .cat-chip');
+        if (!chips.length || k > 20) break;
+        const b = buckets[(k + i) % buckets.length];
+        if (k % 2 === 0) await dragTo(p, chips[0], b); else { await chips[0].click(); await b.click(); }
+      }
       await clickSubmit();
       break;
     }

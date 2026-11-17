@@ -1,4 +1,5 @@
 // Saisie des réponses sur le téléphone, un composant par type de question.
+import { Sortable, useDragTo } from './Sortable';
 import { Rich } from './Rich';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PubQuestion } from '../net/protocol';
@@ -105,39 +106,16 @@ function WordsInput({ q, onSubmit, n, max, placeholder = 'Un mot' }: Props & { n
   );
 }
 
-/** Liste réordonnable : glisser (doigt/souris) ou flèches. */
+/** Liste réordonnable au doigt : on attrape un élément et on le glisse à sa place. */
 export function SortableList({ items, onChange }: { items: { id: string; text: string }[]; onChange: (ids: { id: string; text: string }[]) => void }) {
-  const [drag, setDrag] = useState<string | null>(null);
-  const refs = useRef<Record<string, HTMLDivElement | null>>({});
-  const move = (from: number, to: number) => {
-    if (to < 0 || to >= items.length || from === to) return;
-    const a = items.slice();
-    const [x] = a.splice(from, 1);
-    a.splice(to, 0, x);
-    onChange(a);
-  };
-  const onMove = (e: React.PointerEvent) => {
-    if (!drag) return;
-    const from = items.findIndex((x) => x.id === drag);
-    for (let i = 0; i < items.length; i++) {
-      const el = refs.current[items[i].id];
-      if (!el || i === from) continue;
-      const r = el.getBoundingClientRect();
-      if (e.clientY > r.top && e.clientY < r.bottom) { move(from, i); break; }
-    }
-  };
   return (
-    <div className="sortable" onPointerMove={onMove} onPointerUp={() => setDrag(null)} onPointerCancel={() => setDrag(null)} onPointerLeave={() => setDrag(null)}>
-      {items.map((it, i) => (
-        <div key={it.id} ref={(el) => { refs.current[it.id] = el; }} className={`sort-item ${drag === it.id ? 'dragging' : ''}`}
-          onPointerDown={(e) => { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); if ((e.target as HTMLElement).tagName !== 'BUTTON') setDrag(it.id); }}>
-          <span className="num">{i + 1}</span>
-          <span className="grow"><Rich text={it.text} /></span>
-          <button className="btn btn-sm icon-btn" onClick={() => move(i, i - 1)} disabled={i === 0}>▲</button>
-          <button className="btn btn-sm icon-btn" onClick={() => move(i, i + 1)} disabled={i === items.length - 1}>▼</button>
-        </div>
-      ))}
-    </div>
+    <Sortable items={items} onChange={onChange} itemClassName="sort-item" render={(it, i) => (
+      <>
+        <span className="num">{i + 1}</span>
+        <span className="grow"><Rich text={it.text} /></span>
+        <span className="grip-dots" aria-hidden>⠿</span>
+      </>
+    )} />
   );
 }
 
@@ -145,7 +123,7 @@ function OrderInput({ q, onSubmit }: Props) {
   const [items, setItems] = useState(q.items ?? []);
   return (
     <div className="col">
-      <div className="center muted small">{q.type === 'order' ? 'Glisse ou utilise les flèches pour remettre dans l’ordre' : 'Classe du préféré (1) au moins aimé'}</div>
+      <div className="center muted small">{q.type === 'order' ? 'Attrape un élément et glisse-le à sa place' : 'Glisse pour classer du préféré (1) au moins aimé'}</div>
       <SortableList items={items} onChange={setItems} />
       <Submit onClick={() => onSubmit(items.map((x) => x.id))} />
     </div>
@@ -199,40 +177,45 @@ function MatchInput({ q, onSubmit }: Props) {
   const [selL, setSelL] = useState<string | null>(null);
   const colorOf = (lid: string) => answerColor(left.findIndex((l) => l.id === lid));
   const rightOwner = (rid: string) => Object.keys(links).find((l) => links[l] === rid);
-  const tapRight = (rid: string) => {
-    if (!selL) {
-      const owner = rightOwner(rid);
-      if (owner) setLinks((s) => { const n = { ...s }; delete n[owner]; return n; });
-      return;
-    }
+  const link = (lid: string, rid: string) => {
     setLinks((s) => {
       const n = { ...s };
       const owner = Object.keys(n).find((l) => n[l] === rid);
       if (owner) delete n[owner];
-      n[selL] = rid;
+      n[lid] = rid;
       return n;
     });
     setSelL(null);
   };
+  const tapRight = (rid: string) => {
+    if (selL) return link(selL, rid);
+    const owner = rightOwner(rid);
+    if (owner) setLinks((s) => { const n = { ...s }; delete n[owner]; return n; });
+  };
+  const dd = useDragTo((lid, rid) => link(lid, rid), (lid) => setSelL((s) => (s === lid ? null : lid)));
   return (
     <div className="col">
-      <div className="center muted small">Touche un élément à gauche puis son partenaire à droite</div>
+      <div className="center muted small">Glisse chaque élément de gauche sur son partenaire à droite (ou touche l’un puis l’autre)</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div className="col" style={{ gap: 8 }}>
-          {left.map((l) => (
-            <button key={l.id} className="sort-item" onClick={() => setSelL(selL === l.id ? null : l.id)}
-              style={{ borderColor: links[l.id] || selL === l.id ? colorOf(l.id) : undefined, borderWidth: 3, background: selL === l.id ? colorOf(l.id) : undefined, color: selL === l.id ? '#fff' : undefined }}>
-              {l.text}
-            </button>
-          ))}
+          {left.map((l) => {
+            const d = dd.drag(l.id);
+            return (
+              <div key={l.id} {...d} className={`sort-item ${d.className}`} role="button"
+                style={{ borderColor: links[l.id] || selL === l.id ? colorOf(l.id) : undefined, borderWidth: 3, background: selL === l.id ? colorOf(l.id) : undefined, color: selL === l.id ? '#fff' : undefined }}>
+                <Rich text={l.text} />
+              </div>
+            );
+          })}
         </div>
         <div className="col" style={{ gap: 8 }}>
           {right.map((r) => {
             const owner = rightOwner(r.id);
+            const t = dd.drop(r.id);
             return (
-              <button key={r.id} className="sort-item" onClick={() => tapRight(r.id)}
+              <button key={r.id} {...t} className={`sort-item ${t.className}`} onClick={() => tapRight(r.id)}
                 style={{ borderColor: owner ? colorOf(owner) : undefined, borderWidth: 3, background: owner ? colorOf(owner) : undefined, color: owner ? '#fff' : undefined }}>
-                {r.text}
+                <Rich text={r.text} />
               </button>
             );
           })}
@@ -247,19 +230,43 @@ function CategorizeInput({ q, onSubmit }: Props) {
   const cats = q.categories ?? [];
   const items = q.catItems ?? [];
   const [val, setVal] = useState<Record<string, string>>({});
+  const [sel, setSel] = useState<string | null>(null);
+  const put = (id: string, cat: string) => {
+    setVal((s) => { const n = { ...s }; if (cat === 'pool') delete n[id]; else n[id] = cat; return n; });
+    setSel(null);
+  };
+  const dd = useDragTo(put, (id) => setSel((s) => (s === id ? null : id)));
+  const chip = (it: { id: string; text: string }) => {
+    const d = dd.drag(it.id);
+    const ci = cats.findIndex((c) => c.id === val[it.id]);
+    return (
+      <div key={it.id} {...d} className={`cat-chip ${d.className} ${sel === it.id ? 'sel' : ''}`} role="button"
+        style={ci >= 0 ? { background: answerColor(ci), color: '#fff', borderColor: 'transparent' } : undefined}>
+        <Rich text={it.text} />
+      </div>
+    );
+  };
+  const pool = items.filter((it) => !val[it.id]);
+  const tapZone = (zone: string) => { if (sel) put(sel, zone); };
   return (
     <div className="col">
-      {items.map((it) => (
-        <div key={it.id} className="card" style={{ padding: 10 }}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>{it.text}</div>
-          <div className="row" style={{ gap: 6 }}>
-            {cats.map((c, i) => (
-              <button key={c.id} className="btn btn-sm" onClick={() => setVal((s) => ({ ...s, [it.id]: c.id }))}
-                style={val[it.id] === c.id ? { background: answerColor(i), color: '#fff', borderColor: 'transparent' } : undefined}>{c.name}</button>
-            ))}
-          </div>
+      <div className="center muted small">Glisse chaque élément dans sa catégorie (ou touche l’élément puis la catégorie)</div>
+      {(() => { const t = dd.drop('pool'); return (
+        <div {...t} className={`cat-pool ${t.className}`} onClick={() => tapZone('pool')}>
+          {pool.length ? pool.map(chip) : <span className="muted small">Tout est rangé 👍 (tu peux encore déplacer les éléments)</span>}
         </div>
-      ))}
+      ); })()}
+      <div className="cat-buckets">
+        {cats.map((c, i) => {
+          const t = dd.drop(c.id);
+          return (
+            <div key={c.id} {...t} className={`cat-bucket ${t.className}`} style={{ borderColor: answerColor(i) }} onClick={() => tapZone(c.id)}>
+              <div className="cat-name" style={{ background: answerColor(i) }}><Rich text={c.name} /></div>
+              <div className="cat-in">{items.filter((it) => val[it.id] === c.id).map(chip)}</div>
+            </div>
+          );
+        })}
+      </div>
       <Submit disabled={Object.keys(val).length < items.length} onClick={() => onSubmit(val)} />
     </div>
   );

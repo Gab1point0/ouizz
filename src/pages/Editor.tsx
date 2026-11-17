@@ -1,9 +1,11 @@
 // Éditeur de quiz : liste des questions à gauche, question au centre, réglages à droite.
+import { CropModal, cropPoint, type CropRect } from '../components/CropModal';
+import { Grip, Sortable } from '../components/Sortable';
 import { plain } from '../components/Rich';
 import { hasVoice, speak, SPEECH_LANGS, stopSpeaking } from '../speech';
 import { useEffect, useRef, useState } from 'react';
 import { answerColor, go, MediaView, Modal } from '../components/common';
-import { fileToDataUrl } from '../image';
+import { fileToDataUrl, shrinkDataUrl } from '../image';
 import { changeType, newQuestion, QT, QTYPES, questionProblems } from '../qtypes';
 import { getQuiz, saveQuiz } from '../storage';
 import { themeStyle } from '../themes';
@@ -121,8 +123,6 @@ export function EditorPage({ quizId }: { quizId: string }) {
               <div className="row">
                 <span className="chip">{QT[q.type].icon} {QT[q.type].label}</span>
                 <span className="spacer" />
-                <button className="btn btn-sm icon-btn" onClick={() => move(sel, sel - 1)} disabled={sel === 0} title="Monter">↑</button>
-                <button className="btn btn-sm icon-btn" onClick={() => move(sel, sel + 1)} disabled={sel === quiz.questions.length - 1} title="Descendre">↓</button>
                 <button className="btn btn-sm" onClick={duplicate}>Dupliquer</button>
                 <button className="btn btn-sm btn-danger" onClick={remove}>Supprimer</button>
               </div>
@@ -209,6 +209,7 @@ function SpeechEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
 
 function MediaEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
   const [url, setUrl] = useState('');
+  const [crop, setCrop] = useState(false);
   const set = (m?: Media) => setQ((x) => ({ ...x, media: m }));
   const upload = async () => {
     const f = await pickFile('image/*');
@@ -232,7 +233,11 @@ function MediaEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
         <div className="col" style={{ alignItems: 'center' }}>
           <MediaView media={{ ...q.media, audioOnly: false }} className="" autoplay={false} />
           {q.media.kind === 'video' && <VideoOptions media={q.media} set={set} />}
-          <button className="btn btn-sm" onClick={() => set(undefined)}>Retirer le média</button>
+          <div className="row" style={{ justifyContent: 'center' }}>
+            {q.media.kind === 'image' && <button className="btn btn-sm" onClick={() => setCrop(true)}>✂ Recadrer</button>}
+            <button className="btn btn-sm" onClick={() => set(undefined)}>Retirer le média</button>
+          </div>
+          {crop && q.media.kind === 'image' && <CropModal src={q.media.src} onClose={() => setCrop(false)} onDone={(src) => { set({ kind: 'image', src }); setCrop(false); }} />}
         </div>
       ) : (
         <div className="col" style={{ alignItems: 'center' }}>
@@ -301,6 +306,25 @@ function PinEditor({ q, setQ, upload }: { q: Question; setQ: SetQ; upload: () =>
   const [draft, setDraft] = useState<[number, number][]>([]);
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const [ar, setAr] = useState(zones.find((z) => z.ar)?.ar ?? 1);
+  const [crop, setCrop] = useState(false);
+  const applyCrop = (src: string, c: CropRect) => {
+    const r4 = (n: number) => Math.round(n * 10000) / 10000;
+    const nar = (ar * c.h) / c.w;
+    setQ((x) => ({
+      ...x,
+      media: { kind: 'image', src },
+      zone: undefined,
+      zones: zonesOf(x).map((z) => {
+        const shape = z.shape ?? 'circle';
+        if (shape === 'poly') return { ...z, ar: nar, pts: (z.pts ?? []).map((p) => cropPoint(p, c).map(r4) as [number, number]) };
+        const [cx, cy] = cropPoint([z.x, z.y], c);
+        if (shape === 'rect') return { ...z, ar: nar, x: r4(cx), y: r4(cy), w: r4((z.w ?? 0) / c.w), h: r4((z.h ?? 0) / c.h) };
+        return { ...z, ar: nar, x: r4(cx), y: r4(cy), r: r4(z.r / c.w) };
+      }),
+    }));
+    setAr(nar);
+    setCrop(false);
+  };
   const setZones = (fn: (zs: Zone[]) => Zone[]) => setQ((x) => ({ ...x, zone: undefined, zones: fn(zonesOf(x)) }));
   const rel = (e: React.PointerEvent): [number, number] => {
     const r = ref.current!.getBoundingClientRect();
@@ -391,7 +415,9 @@ function PinEditor({ q, setQ, upload }: { q: Question; setQ: SetQ; upload: () =>
         )}
         <span className="spacer" />
         {zones.length > 1 && <button className="btn btn-sm btn-ghost" onClick={() => { setZones(() => []); setSel(-1); }}>Tout effacer</button>}
+        <button className="btn btn-sm" onClick={() => setCrop(true)}>✂ Recadrer</button>
         <button className="btn btn-sm" onClick={upload}>Changer l’image</button>
+        {crop && <CropModal src={q.media.src} onClose={() => setCrop(false)} onDone={applyCrop} />}
       </div>
     </div>
   );
@@ -435,15 +461,16 @@ function TypeEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
       return (
         <div className="card col">
           <div className="small muted">Paires correctes (la colonne de droite sera mélangée)</div>
-          {pairs.map((p, i) => (
-            <div key={p.id} className="ed-line">
+          <Sortable items={pairs} onChange={set} withHandle className="col" render={(p, i, h) => (
+            <div className="ed-line">
+              <Grip {...h} />
               <span className="chip" style={{ background: answerColor(i), color: '#fff' }}>{i + 1}</span>
               <input className="input" value={p.left} placeholder="Gauche" onChange={(e) => set(pairs.map((x) => (x.id === p.id ? { ...x, left: e.target.value } : x)))} />
               ⟷
               <input className="input" value={p.right} placeholder="Droite" onChange={(e) => set(pairs.map((x) => (x.id === p.id ? { ...x, right: e.target.value } : x)))} />
               <button className="btn btn-sm icon-btn" onClick={() => set(pairs.filter((x) => x.id !== p.id))}>✕</button>
             </div>
-          ))}
+          )} />
           {pairs.length < 8 && <button className="btn btn-sm" onClick={() => set([...pairs, { id: uid(5), left: '', right: '' }])}>+ Paire</button>}
         </div>
       );
@@ -454,24 +481,26 @@ function TypeEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
       return (
         <div className="card col">
           <div className="small muted">Catégories</div>
-          {cats.map((c, i) => (
-            <div key={c.id} className="ed-line">
+          <Sortable items={cats} onChange={(v) => setQ((x) => ({ ...x, categories: v }))} withHandle className="col" render={(c, i, h) => (
+            <div className="ed-line">
+              <Grip {...h} />
               <span className="chip" style={{ background: answerColor(i), color: '#fff' }}>{i + 1}</span>
               <input className="input" value={c.name} placeholder="Nom de la catégorie" onChange={(e) => setQ((x) => ({ ...x, categories: cats.map((y) => (y.id === c.id ? { ...y, name: e.target.value } : y)) }))} />
               <button className="btn btn-sm icon-btn" disabled={cats.length <= 2} onClick={() => setQ((x) => ({ ...x, categories: cats.filter((y) => y.id !== c.id) }))}>✕</button>
             </div>
-          ))}
+          )} />
           {cats.length < 5 && <button className="btn btn-sm" onClick={() => setQ((x) => ({ ...x, categories: [...cats, { id: uid(5), name: '' }] }))}>+ Catégorie</button>}
           <div className="small muted" style={{ marginTop: 8 }}>Éléments à classer</div>
-          {items.map((it) => (
-            <div key={it.id} className="ed-line">
+          <Sortable items={items} onChange={(v) => setQ((x) => ({ ...x, catItems: v }))} withHandle className="col" render={(it, _i, h) => (
+            <div className="ed-line">
+              <Grip {...h} />
               <input className="input" value={it.text} placeholder="Élément" onChange={(e) => setQ((x) => ({ ...x, catItems: items.map((y) => (y.id === it.id ? { ...y, text: e.target.value } : y)) }))} />
               <select className="select" style={{ width: 180 }} value={it.cat} onChange={(e) => setQ((x) => ({ ...x, catItems: items.map((y) => (y.id === it.id ? { ...y, cat: e.target.value } : y)) }))}>
                 {cats.map((c, i) => <option key={c.id} value={c.id}>{c.name || `Catégorie ${i + 1}`}</option>)}
               </select>
               <button className="btn btn-sm icon-btn" onClick={() => setQ((x) => ({ ...x, catItems: items.filter((y) => y.id !== it.id) }))}>✕</button>
             </div>
-          ))}
+          )} />
           {items.length < 12 && <button className="btn btn-sm" onClick={() => setQ((x) => ({ ...x, catItems: [...items, { id: uid(5), text: '', cat: cats[0]?.id ?? '' }] }))}>+ Élément</button>}
         </div>
       );
@@ -543,14 +572,16 @@ function TypeEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
 
 function ChoiceEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
   const answers = q.answers ?? [];
+  const [cropId, setCropId] = useState<string | null>(null);
+  const cropA = answers.find((a) => a.id === cropId);
   const set = (v: typeof answers) => setQ((x) => ({ ...x, answers: v }));
   const toggleCorrect = (id: string) => set(answers.map((a) => (a.id === id ? { ...a, correct: !a.correct } : q.multi ? a : { ...a, correct: false })));
   return (
     <>
-      <div className="ed-ans">
-        {answers.map((a, i) => (
-          <div key={a.id} className="ans" style={{ ...tile(i), flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+      <Sortable items={answers} onChange={set} withHandle className="ed-ans" render={(a, i, h) => (
+          <div className="ans" style={{ ...tile(i), flexDirection: 'column', alignItems: 'stretch', gap: 8, height: '100%' }}>
             <div className="row" style={{ flexWrap: 'nowrap' }}>
+              <Grip {...h} title="Glisser pour changer la place de cette réponse" />
               <TileLabel i={i} />
               <input type="text" value={a.text} placeholder={`Réponse ${i + 1}${i >= 2 ? ' (facultatif)' : ''}`} onChange={(e) => set(answers.map((x) => (x.id === a.id ? { ...x, text: e.target.value } : x)))} />
             </div>
@@ -564,26 +595,34 @@ function ChoiceEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
                 const f = await pickFile('image/*');
                 if (f) { const src = await fileToDataUrl(f, 600); set(answers.map((x) => (x.id === a.id ? { ...x, image: src } : x))); }
               }}>{a.image ? 'Retirer l’image' : '🖼 Image'}</button>
+              {a.image && <button className="btn btn-sm" title="Recadrer l’image" style={{ background: 'rgba(255,255,255,.22)', border: 'none', color: '#fff' }} onClick={() => setCropId(a.id)}>✂</button>}
               {answers.length > 2 && <button className="btn btn-sm icon-btn" title="Supprimer cette réponse" style={{ background: 'rgba(255,255,255,.22)', border: 'none', color: '#fff' }} onClick={() => set(answers.filter((x) => x.id !== a.id))}>✕</button>}
             </div>
           </div>
-        ))}
-      </div>
+      )} />
       {answers.length < 6 && <button className="btn" onClick={() => set([...answers, { id: uid(5), text: '', correct: false }])}>+ Réponse</button>}
+      {cropA?.image && <CropModal src={cropA.image} onClose={() => setCropId(null)} onDone={async (src) => { const small = await shrinkDataUrl(src, 400_000); set(answers.map((x) => (x.id === cropA.id ? { ...x, image: small } : x))); setCropId(null); }} />}
     </>
   );
 }
 
 function StringList({ label, values, onChange, placeholder, max }: { label: string; values: string[]; onChange: (v: string[]) => void; placeholder: string; max: number }) {
+  // identifiants stables (le texte peut être vide ou en double) pour le glisser-déposer
+  const ids = useRef<string[]>([]);
+  while (ids.current.length < values.length) ids.current.push(uid(6));
+  ids.current.length = values.length;
+  const rows = values.map((text, i) => ({ id: ids.current[i], text }));
+  const setRows = (r: { id: string; text: string }[]) => { ids.current = r.map((x) => x.id); onChange(r.map((x) => x.text)); };
   return (
     <div className="col">
       <div className="small muted">{label}</div>
-      {values.map((v, i) => (
-        <div key={i} className="ed-line">
-          <input className="input" value={v} placeholder={`${placeholder} ${i + 1}`} onChange={(e) => onChange(values.map((x, j) => (j === i ? e.target.value : x)))} />
-          {values.length > 1 && <button className="btn btn-sm icon-btn" onClick={() => onChange(values.filter((_, j) => j !== i))}>✕</button>}
+      <Sortable items={rows} onChange={setRows} withHandle className="col" render={(row, i, h) => (
+        <div className="ed-line">
+          {values.length > 1 && <Grip {...h} />}
+          <input className="input" value={row.text} placeholder={`${placeholder} ${i + 1}`} onChange={(e) => onChange(values.map((x, j) => (j === i ? e.target.value : x)))} />
+          {values.length > 1 && <button className="btn btn-sm icon-btn" onClick={() => { ids.current.splice(i, 1); onChange(values.filter((_, j) => j !== i)); }}>✕</button>}
         </div>
-      ))}
+      )} />
       {values.length < max && <button className="btn btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => onChange([...values, ''])}>+ Ajouter</button>}
     </div>
   );
@@ -592,19 +631,17 @@ function StringList({ label, values, onChange, placeholder, max }: { label: stri
 function ItemList({ q, setQ, label }: { q: Question; setQ: SetQ; label: string }) {
   const items = q.items ?? [];
   const set = (v: typeof items) => setQ((x) => ({ ...x, items: v }));
-  const move = (i: number, j: number) => { if (j < 0 || j >= items.length) return; const a = items.slice(); [a[i], a[j]] = [a[j], a[i]]; set(a); };
   return (
     <div className="card col">
-      <div className="small muted">{label}</div>
-      {items.map((it, i) => (
-        <div key={it.id} className="ed-line">
+      <div className="small muted">{label} — glisse ⠿ pour changer l’ordre</div>
+      <Sortable items={items} onChange={set} withHandle className="col" render={(it, i, h) => (
+        <div className="ed-line">
+          <Grip {...h} />
           <span className="chip" style={{ background: answerColor(i), color: '#fff' }}>{i + 1}</span>
           <input className="input" value={it.text} placeholder={`Élément ${i + 1}`} onChange={(e) => set(items.map((x) => (x.id === it.id ? { ...x, text: e.target.value } : x)))} />
-          <button className="btn btn-sm icon-btn" onClick={() => move(i, i - 1)} disabled={i === 0}>↑</button>
-          <button className="btn btn-sm icon-btn" onClick={() => move(i, i + 1)} disabled={i === items.length - 1}>↓</button>
           <button className="btn btn-sm icon-btn" onClick={() => set(items.filter((x) => x.id !== it.id))} disabled={items.length <= 2}>✕</button>
         </div>
-      ))}
+      )} />
       {items.length < 8 && <button className="btn btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => set([...items, { id: uid(5), text: '' }])}>+ Élément</button>}
     </div>
   );
