@@ -96,8 +96,8 @@ try {
       for (const [p, smart] of [[fast, true], [slow, false]]) {
         await p.bringToFront();
         await p.evaluate(async (smart) => {
-          for (let k = 0; k < 30; k++) {
-            const el = document.querySelector(smart ? '.ds-small:not(.ds-hit-ok)' : '.ds-person:not(.ds-hit-ok):not(.ds-hit-bad)');
+          for (let k = 0; k < (smart ? 55 : 20); k++) {
+            const el = document.querySelector(smart ? '.ds-small:not(.ds-hit-ok)' : '.ds-tall:not(.ds-hit-bad), .ds-elder:not(.ds-hit-bad)');
             el?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
             await new Promise((r) => setTimeout(r, 120));
           }

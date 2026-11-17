@@ -1,7 +1,7 @@
 // Panneau « 🎨 Apparence » de l'éditeur : tous les réglages esthétiques du quiz, avec aperçu en direct.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { fileToDataUrl } from '../image';
-import { previewMusic, previewSounds } from '../sfx';
+import { onPreview, previewMusic, previewSounds, stopPreview } from '../sfx';
 import {
   answerColorsOf, DECOS, FONTS, LABEL_STYLES, MUSICS, resolveLook, SOUND_PACKS, Styled, tile, TileLabel, TILE_STYLES, TIMER_STYLES, TRANSITIONS, type Look,
 } from '../style';
@@ -382,7 +382,7 @@ function SoundTab({ eff, set }: { eff: QuizStyle; set: (p: Partial<QuizStyle>) =
         {MUSICS.map((m) => (
           <div key={m.id} className={`type-btn ${(eff.music ?? 'calm') === m.id ? 'active' : ''}`} onClick={() => set({ music: m.id })} role="button">
             <span className="grow">{m.label}</span>
-            {m.id !== 'none' && <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); previewMusic(m.id); }} title="Écouter">▶</button>}
+            {m.id !== 'none' && <PreviewBtn id={m.id} />}
           </div>
         ))}
       </div>
@@ -391,10 +391,10 @@ function SoundTab({ eff, set }: { eff: QuizStyle; set: (p: Partial<QuizStyle>) =
         {([['thinking', 'Musique de réflexion'], ['none', 'Silence']] as const).map(([id, label]) => (
           <div key={id} className={`type-btn ${(eff.questionMusic ?? 'thinking') === id ? 'active' : ''}`} onClick={() => set({ questionMusic: id })} role="button">
             <span className="grow">{label}</span>
-            {id !== 'none' && <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); previewMusic('thinking'); }} title="Écouter">▶</button>}
+            {id !== 'none' && <PreviewBtn id="thinking" />}
           </div>
         ))}
-        <div className="type-btn" role="button" onClick={() => previewMusic('podium')}><span className="grow">Jingle du podium</span><span className="btn btn-sm btn-ghost">▶</span></div>
+        <div className="type-btn" role="button" onClick={() => previewMusic('podium')}><span className="grow">Jingle du podium</span><PreviewBtn id="podium" /></div>
       </div>
       <div className="small muted">Pas de musique de réflexion sur les questions avec vidéo (blind test) ni au buzzer.</div>
       <div className="small muted" style={{ fontWeight: 700 }}>Bruitages</div>
@@ -428,5 +428,21 @@ function IdentityTab({ st, set }: { st: QuizStyle; set: (p: Partial<QuizStyle>) 
       </Field>
       <label className="check"><input type="checkbox" checked={st.phonesThemed !== false} onChange={(e) => set({ phonesThemed: e.target.checked })} /> Appliquer cette apparence aussi sur les téléphones des joueurs</label>
     </>
+  );
+}
+
+/** Bouton d'écoute : ▶ (écouter), ⏳ (chargement du morceau), ⏹ (arrêter). Un seul aperçu à la fois. */
+let previewState: { id: string | null; state: 'loading' | 'playing' | null } = { id: null, state: null };
+const previewSubs = new Set<() => void>();
+onPreview((id, state) => { previewState = { id, state }; previewSubs.forEach((f) => f()); });
+function PreviewBtn({ id }: { id: string }) {
+  const [, force] = useState(0);
+  useEffect(() => { const f = () => force((x) => x + 1); previewSubs.add(f); return () => { previewSubs.delete(f); }; }, []);
+  useEffect(() => () => { if (previewState.id) stopPreview(); }, []);
+  const mine = previewState.id === id;
+  const label = mine ? (previewState.state === 'loading' ? '⏳' : '⏹') : '▶';
+  return (
+    <button className="btn btn-sm btn-ghost" title={mine ? (previewState.state === 'loading' ? 'Chargement…' : 'Arrêter') : 'Écouter'}
+      onClick={(e) => { e.stopPropagation(); previewMusic(id); }}>{label}</button>
   );
 }

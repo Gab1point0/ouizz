@@ -96,17 +96,21 @@ function fade(a: HTMLAudioElement, to: number, ms: number, then?: () => void) {
   step();
 }
 
-function playTrack(name: string, opts: { loop: boolean; vol: number; fallback?: () => void }) {
+function playTrack(name: string, opts: { loop: boolean; vol: number; fallback?: () => void; start?: number }) {
   stopTrack(0);
   const a = new Audio(trackUrl(name));
   a.loop = opts.loop;
   a.volume = 0;
+  a.preload = 'auto';
+  // démarrer plus loin dans le morceau (aperçu : on saute l'intro, plus calme)
+  if (opts.start) a.addEventListener('loadedmetadata', () => { if (a.duration > opts.start! + 5) a.currentTime = opts.start!; }, { once: true });
   track = a;
   trackName = name;
   let failed = false;
   const fail = () => { if (failed || track !== a) return; failed = true; track = null; trackName = ''; opts.fallback?.(); };
   a.addEventListener('error', fail);
   a.play().then(() => fade(a, opts.vol, 800)).catch(fail);
+  return a;
 }
 
 function stopTrack(ms = 600) {
@@ -153,16 +157,33 @@ export function playPodiumJingle() {
 export function stopMusic(ms = 600) { clearInterval(musicTimer); musicTimer = 0; stopTrack(ms); }
 export function setMusicEnabled(v: boolean) { musicOn = v; if (!v) stopMusic(); }
 
-/** Petit aperçu (éditeur) : 8 secondes */
+/** Aperçu dans l'éditeur : 12 secondes, à partir du cœur du morceau (l'intro est plus calme).
+ *  onPreview(id, état) informe l'interface : 'loading' (téléchargement), 'playing', puis null à la fin. */
+type PreviewState = 'loading' | 'playing';
 let previewTimer = 0;
+let previewId: string | null = null;
+let previewListener: ((id: string | null, state: PreviewState | null) => void) | null = null;
+export function onPreview(cb: ((id: string | null, state: PreviewState | null) => void) | null) { previewListener = cb; }
+const notify = (id: string | null, state: PreviewState | null) => { previewId = id; previewListener?.(id, state); };
+export function stopPreview() { clearTimeout(previewTimer); stopMusic(300); notify(null, null); }
 export function previewMusic(style: string) {
   clearTimeout(previewTimer);
   stopMusic(0);
-  const was = musicOn; musicOn = true;
-  const wasOn = enabled; enabled = true;
-  if (style === 'thinking') startQuestionMusic(); else if (style === 'podium') playPodiumJingle(); else startMusic(style);
-  musicOn = was; enabled = wasOn;
-  previewTimer = window.setTimeout(() => stopMusic(), 8000);
+  if (previewId === style) { notify(null, null); return; } // 2e clic sur le même : on arrête
+  const name = style;
+  const vol = style === 'thinking' ? 0.5 : style === 'podium' ? 0.7 : 0.6;
+  notify(style, 'loading');
+  const a = playTrack(name, {
+    loop: false, vol, start: style === 'podium' ? 0 : 25,
+    fallback: () => { // fichier introuvable : boucle synthétisée
+      if (style === 'podium') SOUNDS.podium(); else { const was = musicOn, wasOn = enabled; musicOn = true; enabled = true; startSynth(style); musicOn = was; enabled = wasOn; }
+      notify(style, 'playing');
+    },
+  });
+  a.addEventListener('playing', () => { if (previewId === style) notify(style, 'playing'); }, { once: true });
+  previewTimer = window.setTimeout(() => { stopMusic(600); notify(null, null); }, 12000 + 0);
+  // le compte des 12 s commence quand le son démarre vraiment
+  a.addEventListener('playing', () => { clearTimeout(previewTimer); previewTimer = window.setTimeout(() => { stopMusic(600); notify(null, null); }, 12000); }, { once: true });
 }
 export function previewSounds(p: string) {
   const old = pack; pack = p as Pack;
