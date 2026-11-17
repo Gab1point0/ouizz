@@ -1,7 +1,7 @@
 // « Belos vs Spiders » : survie en vue du dessus dans une grotte.
 // Belos (spartiate doré) se déplace au joystick (en bas à droite) et esquive les araignées qui traversent l'écran
 // (petites = rapides, grosses = lentes). Certaines laissent des toiles qui ralentissent. Des potions rouges laissent
-// du verre au sol : rester 2 s dedans = 1 vie perdue (Belos rougit). 3 vies ; 10 points par seconde de survie.
+// du verre au sol : chaque fois qu'on marche dedans, Belos perd 5 % de vitesse pour le reste de la partie. 3 vies ; 10 points par seconde.
 import { useEffect, useRef, useState } from 'react';
 import type { MinigameProps } from './index';
 import { drawBelos, drawGlass, drawJoystick, drawPotion, drawSpider, drawTarget, drawTorches, drawWeb, makeCave, SKINS } from './belosArt';
@@ -13,17 +13,17 @@ const SAFETY = 700;
 const PR = 14; // rayon de Belos
 const SPEED = 0.15; // px/ms à fond
 const JOY = { x: W - 62, y: H - 62, R: 44 };
-const GLASS_MS = 2000;
+const GLASS_SLOW = 0.95; // vitesse gardée à chaque entrée dans le verre (−5 %)
 
 interface Spider { x: number; y: number; vx: number; vy: number; r: number; skin: number; webber: boolean; lastWeb: number }
 interface Web { x: number; y: number; r: number; born: number; seed: number }
 interface Potion { x0: number; y0: number; x1: number; y1: number; born: number; dur: number }
-interface Glass { x: number; y: number; r: number; born: number; seed: number }
+interface Glass { id: number; x: number; y: number; r: number; born: number; seed: number }
 interface St {
   t: number; x: number; y: number; angle: number; moving: boolean; spiders: Spider[]; webs: Web[]; potions: Potion[]; glass: Glass[];
-  nextSpider: number; nextPotion: number; lives: number; inv: number; glassT: number; over: boolean; seed: number;
+  nextSpider: number; nextPotion: number; lives: number; inv: number; slow: number; inside: number[]; cut: number; pops: { text: string; t: number }[]; over: boolean; seed: number;
 }
-const fresh = (): St => ({ t: 0, x: W / 2, y: H / 2, angle: -Math.PI / 2, moving: false, spiders: [], webs: [], potions: [], glass: [], nextSpider: 800, nextPotion: 7000, lives: 3, inv: 0, glassT: 0, over: false, seed: 1 });
+const fresh = (): St => ({ t: 0, x: W / 2, y: H / 2, angle: -Math.PI / 2, moving: false, spiders: [], webs: [], potions: [], glass: [], nextSpider: 800, nextPotion: 7000, lives: 3, inv: 0, slow: 1, inside: [], cut: 0, pops: [], over: false, seed: 1 });
 
 export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -31,6 +31,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
   const [t0] = useState(() => Date.now());
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const [speedPct, setSpeedPct] = useState(100);
   const [phase, setPhase] = useState<'count' | 'run' | 'over'>('count');
   const done = useRef(false);
   const stick = useRef({ dx: 0, dy: 0, id: -1 });
@@ -105,7 +106,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
       s.potions.push({ x0: side, y0: 40 + Math.random() * (H - 80), x1, y1, born: wall, dur: 1100 });
     };
     const hit = (s: St, wall: number) => {
-      s.lives -= 1; s.inv = wall + 1500; s.glassT = 0;
+      s.lives -= 1; s.inv = wall + 1500;
       setLives(s.lives);
       navigator.vibrate?.(160);
       if (s.lives <= 0) finishRef.current();
@@ -131,7 +132,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
           const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
         }
         const inWeb = s.webs.some((w) => Math.hypot(w.x - s.x, w.y - s.y) < w.r);
-        const v = SPEED * (inWeb ? 0.4 : 1);
+        const v = SPEED * s.slow * (inWeb ? 0.4 : 1);
         s.moving = Math.hypot(dx, dy) > 0.12;
         if (s.moving) { s.x += dx * v * dt; s.y += dy * v * dt; s.angle = Math.atan2(dy, dx); }
         s.x = Math.max(PR + 6, Math.min(W - PR - 6, s.x));
@@ -152,12 +153,18 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
         // potions → verre au sol
         s.nextPotion -= dt;
         if (s.nextPotion <= 0) { spawnPotion(s, wall); s.nextPotion = 8000 - 3500 * d + Math.random() * 3000; }
-        for (const p of s.potions) if (wall - p.born >= p.dur) s.glass.push({ x: p.x1, y: p.y1, r: 34, born: wall, seed: s.seed++ });
+        for (const p of s.potions) if (wall - p.born >= p.dur) s.glass.push({ id: s.seed, x: p.x1, y: p.y1, r: 34, born: wall, seed: s.seed++ });
         s.potions = s.potions.filter((p) => wall - p.born < p.dur);
         s.glass = s.glass.filter((g) => wall - g.born < 9000);
-        const inGlass = s.glass.some((g) => Math.hypot(g.x - s.x, (g.y - s.y) / 0.85) < g.r);
-        if (inGlass && s.inv < wall) { s.glassT += dt; if (s.glassT >= GLASS_MS) hit(s, wall); }
-        else s.glassT = Math.max(0, s.glassT - dt * 1.5);
+        // verre : chaque nouvelle entrée dans une flaque = −5 % de vitesse, jusqu'à la fin
+        const now_in = s.glass.filter((g) => Math.hypot(g.x - s.x, (g.y - s.y) / 0.85) < g.r - 4).map((g) => g.id);
+        for (const id of now_in) if (!s.inside.includes(id)) {
+          s.slow *= GLASS_SLOW; s.cut = wall;
+          s.pops.push({ text: `−5 % vitesse (${Math.round(s.slow * 100)} %)`, t: wall });
+          navigator.vibrate?.(60);
+          setSpeedPct(Math.round(s.slow * 100));
+        }
+        s.inside = now_in;
         const p = pts();
         if (p !== lastPts) { lastPts = p; setScore(p); }
       }
@@ -169,7 +176,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
       for (const w of s.webs) { const age = wall - w.born; drawWeb(ctx, w.x, w.y, w.r, Math.min(1, age / 200) * Math.min(1, (11000 - age) / 1500) * 0.9, w.seed); }
       for (const p of s.potions) { const k = (wall - p.born) / p.dur; drawTarget(ctx, p.x1, p.y1, 34, k); }
       const blink = s.inv > wall && Math.floor(wall / 100) % 2 === 1;
-      if (!blink) drawBelos(ctx, s.x, s.y, s.angle, wall, s.moving, Math.min(1, s.glassT / GLASS_MS));
+      if (!blink) drawBelos(ctx, s.x, s.y, s.angle, wall, s.moving, Math.max(0, 1 - (wall - s.cut) / 500) * 0.8);
       for (const sp of s.spiders) drawSpider(ctx, sp.x, sp.y, sp.r, Math.atan2(sp.vy, sp.vx), wall, SKINS[sp.skin]);
       // potions en vol (arc + rotation)
       for (const p of s.potions) {
@@ -179,10 +186,12 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
         drawPotion(ctx, x, y, k * 9, 1.3);
       }
       if (s.inv > wall && !blink) { ctx.fillStyle = 'rgba(255,40,40,.12)'; ctx.fillRect(0, 0, W, H); }
-      if (s.glassT > 150 && !s.over) {
-        ctx.save(); ctx.font = '900 18px "Arial Black", Arial, sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
-        ctx.lineWidth = 5; ctx.strokeStyle = '#fff'; ctx.strokeText('⚠ SORS DU VERRE !', W / 2, 34);
-        ctx.fillStyle = '#d62828'; ctx.fillText('⚠ SORS DU VERRE !', W / 2, 34); ctx.restore();
+      s.pops = s.pops.filter((p) => wall - p.t < 1300);
+      for (const p of s.pops) {
+        const k = (wall - p.t) / 1300;
+        ctx.save(); ctx.globalAlpha = 1 - k * k; ctx.font = '900 16px "Arial Black", Arial, sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+        ctx.lineWidth = 5; ctx.strokeStyle = '#fff'; ctx.strokeText(p.text, s.x, s.y - 34 - k * 24);
+        ctx.fillStyle = '#d62828'; ctx.fillText(p.text, s.x, s.y - 34 - k * 24); ctx.restore();
       }
       drawJoystick(ctx, JOY.x, JOY.y, JOY.R, stick.current.dx, stick.current.dy, stick.current.id >= 0);
       raf = requestAnimationFrame(frame);
@@ -200,6 +209,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
     <div className="mg-runner">
       <div className="mg-runner-top">
         <span className="mg-lives">{'❤️'.repeat(lives)}{'🖤'.repeat(Math.max(0, 3 - lives))}</span>
+        {speedPct < 100 && <span className="small" style={{ color: '#d62828', fontWeight: 800 }}>🏃 {speedPct} %</span>}
         <b>⏱ {(score / 10).toFixed(1)} s · {score} pts</b>
       </div>
       <div className="mg-runner-area" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
@@ -207,7 +217,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
         {phase === 'count' && <div className="mg-overlay"><div className="mg-count anim-pop" key={count}>{count || 'GO'}</div></div>}
         {phase === 'over' && <div className="mg-overlay"><div className="mg-count" style={{ fontSize: '2em' }}>{lives <= 0 ? 'Belos est tombé…' : 'Survivant !'}<br />{score} pts</div></div>}
       </div>
-      <div className="small muted center">Joystick en bas à droite. Esquive les araignées, évite les toiles (ça ralentit) et ne reste pas plus de 2 s dans le verre rouge.</div>
+      <div className="small muted center">Joystick en bas à droite. Esquive les araignées. Les toiles ralentissent ; chaque passage dans le verre rouge te fait perdre 5 % de vitesse pour toute la partie.</div>
     </div>
   );
 }

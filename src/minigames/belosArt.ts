@@ -123,15 +123,12 @@ export function drawBelos(c: C, x: number, y: number, angle: number, t: number, 
   // reflet
   c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.ellipse(-3, -5, 3, 2, -0.5, 0, 7); c.fill();
   c.restore();
-  // il rougit quand il reste dans le verre
+  // éclair rouge quand il marche dans le verre
   if (red > 0.01) {
     c.save();
     const g = c.createRadialGradient(x, y, 4, x, y, 30);
     g.addColorStop(0, `rgba(255,30,30,${0.65 * red})`); g.addColorStop(1, 'rgba(255,30,30,0)');
     c.fillStyle = g; c.beginPath(); c.arc(x, y, 30, 0, 7); c.fill();
-    // anneau qui se remplit : temps restant avant de prendre un coup
-    c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 3;
-    c.beginPath(); c.arc(x, y, 27, -Math.PI / 2, -Math.PI / 2 + red * Math.PI * 2); c.stroke();
     c.restore();
   }
 }

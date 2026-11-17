@@ -62,8 +62,8 @@ export const MINIGAMES: MinigameDef[] = [
   },
   {
     id: 'belos', name: 'Belos vs Spiders', icon: '🕷️', unit: 'pts', time: 60, Component: BelosSpiders,
-    pitch: 'Belos le spartiate doit survivre dans une grotte : joystick pour esquiver les araignées (petites = rapides), les toiles ralentissent, le verre des potions rouges fait mal au bout de 2 s. 3 vies, 10 pts par seconde.',
-    howTo: 'Esquivez les araignées au joystick ! Toiles = ralenti, verre rouge = sortez vite. 3 vies.',
+    pitch: 'Belos le spartiate doit survivre dans une grotte : joystick pour esquiver les araignées (petites = rapides), les toiles ralentissent, chaque passage dans le verre des potions rouges fait perdre 5 % de vitesse jusqu’à la fin. 3 vies, 10 pts par seconde.',
+    howTo: 'Esquivez les araignées au joystick ! Toiles = ralenti, verre rouge = −5 % de vitesse pour toute la partie. 3 vies.',
   },
 ];
 
