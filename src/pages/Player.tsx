@@ -1,4 +1,5 @@
 // Écran du téléphone d'un joueur.
+import { QTitle } from '../minigames/Title';
 import { Rich } from '../components/Rich';
 import { useEffect, useRef, useState } from 'react';
 import { AnswerInput } from '../components/answers';
@@ -235,7 +236,7 @@ function PlayerGame({ pin, me, local, onLeave, onAdopt, back }: { pin: string; m
           <div className="chip">Question {st.qNum}/{st.qTotal}</div>
           <div style={{ fontSize: '3em' }} className="anim-pop">{q ? QT[q.type].icon : ''}</div>
           <h2>{q ? QT[q.type].label : ''}</h2>
-          {q?.title && <div className="card anim-slide" style={{ fontWeight: 700, fontSize: '1.2em' }}><Rich text={q.title} /></div>}
+          {q?.title && <div className="card anim-slide" style={{ fontWeight: 700, fontSize: '1.2em' }}><QTitle title={q.title} minigame={q.minigame} /></div>}
           <ReadyCount endsAt={endsAt} />
         </div>
       </>);
@@ -246,7 +247,7 @@ function PlayerGame({ pin, me, local, onLeave, onAdopt, back }: { pin: string; m
       const answered = sent[key] || !!res?.a;
       if (q.type === 'slide') {
         return wrap(<>{top}<div className="phone-main center col">
-          {q.title ? <><h2><Rich text={q.title} /></h2>{q.body && <p style={{ whiteSpace: 'pre-wrap' }}><Rich text={q.body} /></p>}</> : <><div className="big-emoji">👀</div><h2>Regarde l’écran</h2></>}
+          {q.title ? <><h2><QTitle title={q.title} minigame={q.minigame} /></h2>{q.body && <p style={{ whiteSpace: 'pre-wrap' }}><Rich text={q.body} /></p>}</> : <><div className="big-emoji">👀</div><h2>Regarde l’écran</h2></>}
           {q.mediaKey && media[q.mediaKey] && <img src={media[q.mediaKey]} alt="" style={{ maxWidth: '100%', borderRadius: 12 }} />}
         </div>{reactBar}</>);
       }
@@ -254,7 +255,7 @@ function PlayerGame({ pin, me, local, onLeave, onAdopt, back }: { pin: string; m
       return wrap(<>
         {top}
         <PhoneTimer endsAt={endsAt} total={(st.sub === 'vote' ? Math.max(20, Math.round(q.time / 2)) : q.time) * 1000} paused={st.paused} />
-        {q.title && <div className="card center" style={{ fontWeight: 800, fontSize: '1.15em', padding: 12 }}><Rich text={q.title} /></div>}
+        {q.title && <div className="card center" style={{ fontWeight: 800, fontSize: '1.15em', padding: 12 }}><QTitle title={q.title} minigame={q.minigame} /></div>}
         {q.mediaKey && media[q.mediaKey] && q.type !== 'pin' && <img src={media[q.mediaKey]} alt="" style={{ maxWidth: '100%', maxHeight: '28vh', objectFit: 'contain', borderRadius: 12, alignSelf: 'center' }} />}
         <div className="phone-main">
           {answered
@@ -358,7 +359,7 @@ function BuzzerView({ st, pid, onBuzz }: { st: PubState; pid: string; onBuzz: ()
   const first = b.queue[0] ? st.players.find((p) => p.pid === b.queue[0]) : null;
   return (
     <div className="phone-main center col" style={{ alignItems: 'center', gap: 20 }}>
-      {st.q?.title && <div className="card" style={{ fontWeight: 800 }}><Rich text={st.q.title} /></div>}
+      {st.q?.title && <div className="card" style={{ fontWeight: 800 }}><QTitle title={st.q.title} minigame={st.q.minigame} /></div>}
       {pos === 0 ? <><div className="big-emoji anim-pop">🎤</div><h2>À toi ! Réponds à voix haute</h2></>
         : pos > 0 ? <><div className="big-emoji">✋</div><h2>Tu es {pos + 1}e dans la file</h2><div className="muted">{first?.name} répond…</div></>
           : locked ? <><div className="big-emoji">🚫</div><h2>Mauvaise réponse, tu ne peux plus buzzer</h2></>

@@ -1,4 +1,5 @@
 // Affichage des résultats d'une question sur le grand écran, un rendu par type.
+import { ShrinkTitle } from '../minigames/Title';
 import { minigameOf } from '../minigames';
 import { Rich } from './Rich';
 import { useMemo } from 'react';
@@ -340,7 +341,7 @@ export function MinigameStage({ game, q }: { game: HostGame; q: Question }) {
   return (
     <div className="card center col mg-stage anim-pop" style={{ alignItems: 'center', gap: 10, maxWidth: 900 }}>
       <div style={{ fontSize: '4em', lineHeight: 1 }}>{def.icon}</div>
-      <div style={{ fontSize: '2em', fontWeight: 900 }}>{def.name}</div>
+      <div style={{ fontSize: '2em', fontWeight: 900 }}>{def.titleParts ? <ShrinkTitle parts={def.titleParts} /> : def.name}</div>
       <div style={{ fontSize: '1.4em' }}>{def.howTo}</div>
       <div className="muted">🎮 À vous de jouer sur vos téléphones ! · {done}/{total} ont terminé</div>
     </div>

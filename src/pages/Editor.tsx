@@ -1,4 +1,5 @@
 // Éditeur de quiz : liste des questions à gauche, question au centre, réglages à droite.
+import { ShrinkTitle } from '../minigames/Title';
 import { MINIGAMES } from '../minigames';
 import { PreviewModal } from '../components/PreviewModal';
 import { CropModal, cropPoint, type CropRect } from '../components/CropModal';
@@ -469,7 +470,7 @@ function TypeEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
               <button key={m.id} className={`type-btn ${(q.minigame ?? '67') === m.id ? 'active' : ''}`}
                 onClick={() => setQ((x) => ({ ...x, minigame: m.id, time: m.time, title: !x.title || MINIGAMES.some((o) => o.name === x.title) ? m.name : x.title }))}>
                 <span style={{ fontSize: '1.6em' }}>{m.icon}</span>
-                <span><b>{m.name}</b><br /><span className="muted">{m.pitch}</span><br /><span className="muted small">Durée conseillée : {m.time} s</span></span>
+                <span><b>{m.titleParts ? <ShrinkTitle parts={m.titleParts} /> : m.name}</b><br /><span className="muted">{m.pitch}</span><br /><span className="muted small">Durée conseillée : {m.time} s</span></span>
               </button>
             ))}
           </div>

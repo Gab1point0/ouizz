@@ -26,7 +26,7 @@ try {
     const now = Date.now();
     const q = (id, minigame, time, title) => ({ id, type: 'minigame', minigame, time, title, points: 1 });
     await saveQuiz({ id: 'mgtest', title: 'Test mini-jeux', theme: 'craie', createdAt: now, updatedAt: now,
-      questions: [q('m1', '67', 12, '67 Challenge'), q('m2', 'maxime', 14, 'Maxime pendant l’ellipse'), q('m3', 'dating', 14, 'Clint’s Dating Sim'), q('m4', 'flap', 14, 'Flap Emile')] });
+      questions: [q('m1', '67', 12, '67 Challenge'), q('m2', 'maxime', 14, 'Maxime pendant l’ellipse'), q('m3', 'dating', 14, 'Clint’s Dating Sim'), q('m4', 'flap', 14, 'Flap Emile'), q('m5', 'calcul', 30, 'Calcul mental')] });
   });
   await host.goto(`${BASE}#/run/mgtest`, { waitUntil: 'networkidle0' });
   await wf(host, () => document.body.innerText.includes('Options de la partie'));
@@ -51,14 +51,14 @@ try {
   await host.bringToFront();
   await click(host, 'Commencer');
 
-  for (const [i, id] of ['67', 'maxime', 'dating', 'flap'].entries()) {
+  for (const [i, id] of ['67', 'maxime', 'dating', 'flap', 'calcul'].entries()) {
     await host.bringToFront();
     await wf(host, () => ['ready', 'question'].includes(document.querySelector('.app')?.dataset.phase));
     if (await host.evaluate(() => document.querySelector('.app')?.dataset.phase === 'ready')) await host.evaluate(() => document.querySelector('.stage-bottom .btn-primary')?.click());
     await wf(host, () => document.querySelector('.app')?.dataset.phase === 'question');
     const [fast, slow] = players;
     await fast.bringToFront();
-    await wf(fast, (id) => !!document.querySelector(id === '67' ? '.mg-hand' : (id === 'maxime' || id === 'flap') ? '.mg-runner canvas' : '.ds-field'), 10000, id);
+    await wf(fast, (id) => !!document.querySelector(id === '67' ? '.mg-hand' : (id === 'maxime' || id === 'flap') ? '.mg-runner canvas' : id === 'calcul' ? '.mc-pad' : '.ds-field'), 10000, id);
     await sleep(3200); // compte à rebours
     if (id === '67') {
       // le joueur rapide tape 40 fois en alternant, le lent 10 fois
@@ -71,6 +71,18 @@ try {
       }
       await fast.bringToFront();
       await fast.screenshot({ path: `${OUT}/mg-67-telephone.png` });
+    } else if (id === 'calcul') {
+      // le rapide tape 67 dix fois (avec une erreur au début), le lent ne fait que 3 calculs
+      for (const [p, n] of [[fast, 10], [slow, 3]]) {
+        await p.bringToFront();
+        await p.evaluate(async (n) => {
+          const key = (k) => [...document.querySelectorAll('.mc-key')].find((b) => b.textContent === k).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+          key('1'); key('2'); await new Promise((r) => setTimeout(r, 450)); // mauvaise réponse
+          for (let k = 0; k < n; k++) { key('6'); key('7'); await new Promise((r) => setTimeout(r, 80)); }
+        }, n);
+      }
+      await fast.bringToFront();
+      await fast.screenshot({ path: `${OUT}/mg-calcul-telephone.png` });
     } else if (id === 'flap') {
       // le rapide tape régulièrement pour voler
       await fast.evaluate(async () => { const a = document.querySelector('.mg-runner-area'); for (let k = 0; k < 18; k++) { a.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); await new Promise((r) => setTimeout(r, 380)); } });
@@ -103,7 +115,7 @@ try {
     console.log(`  ${id} :`, rows.join(' | '));
     check(rows.length === 2, `${id} : 2 scores affichés`);
     if (id !== 'maxime' && id !== 'flap') check(/Rapide/.test(rows[0] ?? ''), `${id} : le meilleur joueur est premier`);
-    if (i < 3) {
+    if (i < 4) {
       for (let k = 0; k < 3; k++) {
         await host.evaluate(() => document.querySelector('.stage-bottom .btn-primary')?.click());
         await sleep(600);

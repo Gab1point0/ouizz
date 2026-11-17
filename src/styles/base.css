@@ -437,3 +437,25 @@ table.results th, table.results td { padding: 6px 8px; border-bottom: 1px solid 
 @keyframes ds-fx { to { top: -35%; opacity: 0; } }
 .mg-flash-ok .ds-field { box-shadow: 0 0 0 4px #20b486; }
 .mg-flash-bad .ds-field { box-shadow: 0 0 0 4px #e5484d; }
+
+/* Calcul mental */
+.mg-calc { display: flex; flex-direction: column; gap: 10px; user-select: none; -webkit-user-select: none; }
+.mc-steps { display: flex; gap: 5px; justify-content: center; }
+.mc-steps i { width: 22px; height: 8px; border-radius: 99px; background: rgba(127,127,127,.25); }
+.mc-steps i.cur { background: var(--accent); }
+.mc-steps i.ok { background: #20b486; }
+.mc-card { position: relative; min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px 12px; border-radius: 18px; background: var(--card); border: 2px solid var(--line); text-align: center; }
+.mc-level { font-size: .85em; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; opacity: .55; }
+.mc-expr { font-size: clamp(1.4em, 7vw, 2.3em); font-weight: 900; line-height: 1.2; font-family: 'Cambria Math', 'STIX Two Math', Cambria, Georgia, serif; }
+.mc-answer { font-size: 2.2em; font-weight: 900; min-height: 1.2em; }
+.mc-answer.bad { color: #e5484d; animation: ds-bad .3s; }
+.mc-done { font-size: 1.8em; font-weight: 900; }
+.mc-good { position: absolute; top: 8px; right: 12px; color: #20b486; font-weight: 900; font-size: 1.3em; animation: ds-fx .7s ease-out forwards; }
+.mc-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mc-pad.off { opacity: .45; pointer-events: none; }
+.mc-key { height: 62px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--fg); font-size: 1.7em; font-weight: 900; touch-action: manipulation; }
+.mc-key:active { transform: scale(.95); background: var(--accent); color: #fff; }
+
+.shrink-title { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.12; }
+.shrink-title > span { display: block; }
+.type-btn .shrink-title { align-items: flex-start; font-size: 1.5em; }

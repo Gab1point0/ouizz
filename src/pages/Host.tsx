@@ -1,4 +1,5 @@
 // Grand écran de l'animateur : préparation, salle d'attente (QR code), questions, résultats, podium.
+import { QTitle } from '../minigames/Title';
 import { speak, stopSpeaking } from '../speech';
 import { Rich } from '../components/Rich';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -297,7 +298,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
             <div className="stage-body col" style={{ flexDirection: 'column' }}>
               <div className="anim-pop" style={{ fontSize: '4em' }}>{QT[q.type].icon}</div>
               <div className="chip anim-slide" style={{ fontSize: '1.2em' }}>{QT[q.type].label}</div>
-              <div className="stage-title anim-slide d2" style={{ maxWidth: 1100 }}><Rich text={q.title} /></div>
+              <div className="stage-title anim-slide d2" style={{ maxWidth: 1100 }}><QTitle title={q.title} minigame={q.minigame} /></div>
               <Timer endsAt={s.endsAt} total={total} paused={s.pausedLeft} size={80} />
             </div>
             {controls}
@@ -315,7 +316,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
               {q.type !== 'slide' && q.type !== 'buzzer' && <div className="counter"><b>{Object.keys(game.currentAnswers).length}</b>réponse{Object.keys(game.currentAnswers).length > 1 ? 's' : ''} / {online.length}</div>}
               {(s.endsAt > 0 || s.pausedLeft !== undefined) && <Timer endsAt={s.endsAt} total={total} paused={s.pausedLeft} />}
             </div>
-            {(q.title || q.type !== 'slide') && <div className="stage-title anim-down"><Rich text={q.title} /></div>}
+            {(q.title || q.type !== 'slide') && <div className="stage-title anim-down"><QTitle title={q.title} minigame={q.minigame} /></div>}
             <div className={`stage-body layout-${look.layout}`}>
               <StageMedia q={q} control={mediaControl} />
               {q.type === 'slide' && q.body && <div className="card anim-slide" style={{ fontSize: '1.5em', whiteSpace: 'pre-wrap', maxWidth: 1100 }}><Rich text={q.body} /></div>}
@@ -344,7 +345,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
               <span className="spacer" />
               <div className="counter"><b>{Object.keys(game.answersFor(q.id)).length}</b>réponses</div>
             </div>
-            <div className="stage-title"><Rich text={q.title} /></div>
+            <div className="stage-title"><QTitle title={q.title} minigame={q.minigame} /></div>
             <div className="stage-body" style={{ flexDirection: 'column' }}>
               {q.media?.kind === 'video' && q.media.audioOnly && q.media.revealVideo && <MediaView media={{ ...q.media, audioOnly: false }} />}
               <Results game={game} q={q} pq={pq} reveal />
