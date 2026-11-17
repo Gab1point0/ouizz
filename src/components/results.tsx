@@ -343,7 +343,8 @@ export function MinigameStage({ game, q }: { game: HostGame; q: Question }) {
       <div style={{ fontSize: '4em', lineHeight: 1 }}>{def.icon}</div>
       <div style={{ fontSize: '2em', fontWeight: 900 }}>{def.titleParts ? <ShrinkTitle parts={def.titleParts} /> : def.name}</div>
       <div style={{ fontSize: '1.4em' }}>{def.howTo}</div>
-      <div className="muted">🎮 À vous de jouer sur vos téléphones ! · {done}/{total} ont terminé</div>
+      {def.endless && <div style={{ fontWeight: 800 }}>♾ Pas de limite de temps : on joue jusqu’à la dernière vie !</div>}
+      <div className="muted">🎮 À vous de jouer sur vos téléphones ! · {done}/{total} {def.endless ? 'éliminé' + (done > 1 ? 's' : '') : 'ont terminé'}</div>
     </div>
   );
 }

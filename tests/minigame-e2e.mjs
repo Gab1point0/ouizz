@@ -116,12 +116,24 @@ try {
     }
     await host.bringToFront();
     await host.screenshot({ path: `${OUT}/mg-${id}-ecran-jeu.png` });
+    const endless = ['maxime', 'flap', 'belos'].includes(id);
+    if (endless) {
+      // jeux de survie : pas de chrono ; on vérifie qu'il n'y en a pas, puis l'animateur révèle à la main
+      const timer = await host.evaluate(() => { const el = document.querySelector('.timer, .timer-bar, .timer-number'); return el ? `${document.querySelector('.app')?.dataset.phase} ${el.outerHTML.slice(0, 160)}` : ''; });
+      check(!timer, `${id} : pas de limite de temps ${timer}`);
+      // le joueur « rapide » joue jusqu'à perdre ses 3 vies (page au premier plan pour que le jeu tourne)
+      await fast.bringToFront();
+      await fast.waitForFunction(() => !document.querySelector('.mg-runner') || /Plus de vies|Crash|tombé/.test(document.querySelector('.mg-overlay')?.textContent ?? ''), { polling: 300, timeout: 120000 });
+      await sleep(800);
+      await host.bringToFront();
+      await host.evaluate(() => document.querySelector('.stage-bottom .btn-primary')?.click());
+    }
     await wf(host, () => document.querySelector('.app')?.dataset.phase === 'reveal', 30000);
     await sleep(1000);
     await host.screenshot({ path: `${OUT}/mg-${id}-ecran-resultats.png` });
     const rows = await host.$$eval('.mg-score-row', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim()));
     console.log(`  ${id} :`, rows.join(' | '));
-    check(rows.length === 2, `${id} : 2 scores affichés`);
+    check(endless ? rows.length >= 1 : rows.length === 2, `${id} : scores affichés`);
     if (id !== 'maxime' && id !== 'flap') check(/Rapide/.test(rows[0] ?? ''), `${id} : le meilleur joueur est premier`);
     if (i < 5) {
       for (let k = 0; k < 3; k++) {

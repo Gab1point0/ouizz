@@ -126,7 +126,8 @@ export function SortableList({ items, onChange }: { items: { id: string; text: s
 function MinigameInput({ q, endsAt, onSubmit }: Props) {
   const def = minigameOf(q.minigame);
   const sent = useRef(false);
-  const [end] = useState(() => endsAt && endsAt > Date.now() ? endsAt : Date.now() + q.time * 1000);
+  // survie : pas de fin ; sinon fin de la question (ou durée conseillée du jeu si la question n'a pas de limite)
+  const [end] = useState(() => (def.endless ? Infinity : endsAt && endsAt > Date.now() ? endsAt : Date.now() + (q.time > 0 ? q.time : def.time) * 1000));
   const finish = useCallback((score: number) => { if (sent.current) return; sent.current = true; onSubmit(Math.max(0, Math.round(score))); }, [onSubmit]);
   return <def.Component endsAt={end} onFinish={finish} />;
 }

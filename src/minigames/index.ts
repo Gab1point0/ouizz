@@ -28,8 +28,10 @@ export interface MinigameDef {
   howTo: string;
   /** unité du score (« 67 », « m »…) */
   unit: string;
-  /** durée conseillée (s), compte à rebours compris */
+  /** durée conseillée (s), compte à rebours compris ; 0 = sans limite */
   time: number;
+  /** jeu de survie : pas de limite de temps, la manche s'arrête quand tout le monde a perdu ses vies */
+  endless?: boolean;
   Component: ComponentType<MinigameProps>;
 }
 
@@ -40,7 +42,7 @@ export const MINIGAMES: MinigameDef[] = [
     howTo: 'Alternez main gauche (6) et main droite (7) le plus vite possible !',
   },
   {
-    id: 'maxime', name: 'Maxime pendant l’ellipse', icon: '🏃', unit: 'm', time: 45, Component: MaximeRunner,
+    id: 'maxime', name: 'Maxime pendant l’ellipse', icon: '🏃', unit: 'm', time: 0, endless: true, Component: MaximeRunner,
     pitch: 'Course sans fin : saute les burgers, double-saute les tacos, baisse-toi sous les enseignes. Plus tu cours, plus Maxime maigrit. 3 vies.',
     howTo: 'Sautez par-dessus la malbouffe, double saut pour les tacos, baissez-vous sous les enseignes. 3 vies !',
   },
@@ -50,7 +52,7 @@ export const MINIGAMES: MinigameDef[] = [
     howTo: 'Touchez seulement les petits (casquette ou robe/jupe) ! Grands et papis-mamies = −1.',
   },
   {
-    id: 'flap', name: 'Flap Emile', icon: '✈️', unit: '🌴', time: 45, Component: FlapEmile,
+    id: 'flap', name: 'Flap Emile', icon: '✈️', unit: '🌴', time: 0, endless: true, Component: FlapEmile,
     pitch: 'Pilote l’avion Emile Airlines dans la jungle amazonienne : touche pour remonter, passe entre les arbres et les lianes. Les singes lancent des bananes (sans danger). 3 vies.',
     howTo: 'Touchez l’écran pour remonter et passez entre les arbres ! 3 vies.',
   },
@@ -61,13 +63,16 @@ export const MINIGAMES: MinigameDef[] = [
     howTo: '10 calculs, de plus en plus difficiles. Répondez le plus vite possible !',
   },
   {
-    id: 'belos', name: 'Belos vs Spiders', icon: '🕷️', unit: 'pts', time: 60, Component: BelosSpiders,
+    id: 'belos', name: 'Belos vs Spiders', icon: '🕷️', unit: 'pts', time: 0, endless: true, Component: BelosSpiders,
     pitch: 'Belos le spartiate doit survivre dans une grotte : joystick pour esquiver les araignées (petites = rapides), les toiles ralentissent, le verre des potions rouges fait perdre 5 % de vitesse en y entrant puis à chaque seconde dedans, jusqu’à la fin. 3 vies, 10 pts par seconde.',
     howTo: 'Esquivez les araignées au joystick ! Toiles = ralenti, verre rouge = −5 % de vitesse par passage et par seconde dedans. 3 vies.',
   },
 ];
 
 export const minigameOf = (id?: string): MinigameDef => MINIGAMES.find((m) => m.id === id) ?? MINIGAMES[0];
+
+/** Temps réel d'une question (s) : 0 pour un mini-jeu de survie, quel que soit le réglage. */
+export const questionTime = (q: { type: string; time: number; minigame?: string }): number => (q.type === 'minigame' && minigameOf(q.minigame).endless ? 0 : q.time);
 
 /** Part des points de chacun : meilleur score = 1, les autres au prorata (0 si personne n'a marqué). */
 export function minigameFractions(scores: Record<string, number>): Record<string, number> {

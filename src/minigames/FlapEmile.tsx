@@ -75,13 +75,13 @@ export function FlapEmile({ endsAt, onFinish }: MinigameProps) {
       if (running) {
         setPhase((p) => (p === 'count' ? 'run' : p));
         s.t += dt;
-        const speed = Math.min(0.24, 0.15 + s.t / 200000);
+        const speed = Math.min(0.34, 0.15 + s.t / 200000); // continue d'accélérer (sans limite de temps)
         s.scroll += speed * dt;
         s.vy += GRAVITY * dt;
         s.y += s.vy * dt;
         s.nextIn -= speed * dt;
         if (s.nextIn <= 0) {
-          const gap = Math.max(118, GAP0 - s.score * 3);
+          const gap = Math.max(104, GAP0 - s.score * 3);
           const gapY = 120 + Math.random() * (GROUND - 240);
           s.trees.push({ x: W + 10, gapY, gap, passed: false, monkey: Math.random() < 0.6, threwAt: 0 });
           s.nextIn = 210;

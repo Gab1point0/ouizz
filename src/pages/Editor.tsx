@@ -470,7 +470,7 @@ function TypeEditor({ q, setQ }: { q: Question; setQ: SetQ }) {
               <button key={m.id} className={`type-btn ${(q.minigame ?? '67') === m.id ? 'active' : ''}`}
                 onClick={() => setQ((x) => ({ ...x, minigame: m.id, time: m.time, title: !x.title || MINIGAMES.some((o) => o.name === x.title) ? m.name : x.title }))}>
                 <span style={{ fontSize: '1.6em' }}>{m.icon}</span>
-                <span><b>{m.titleParts ? <ShrinkTitle parts={m.titleParts} /> : m.name}</b><br /><span className="muted">{m.pitch}</span><br /><span className="muted small">Durée conseillée : {m.time} s</span></span>
+                <span><b>{m.titleParts ? <ShrinkTitle parts={m.titleParts} /> : m.name}</b><br /><span className="muted">{m.pitch}</span><br /><span className="muted small">{m.endless ? '♾ Sans limite de temps : la manche s’arrête quand tout le monde a perdu ses 3 vies' : `Durée conseillée : ${m.time} s`}</span></span>
               </button>
             ))}
           </div>

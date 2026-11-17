@@ -123,6 +123,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
         setPhase((p) => (p === 'count' ? 'run' : p));
         s.t += dt;
         const d = Math.min(1, s.t / 50000); // difficulté 0 → 1 en 50 s
+        const more = Math.max(0, s.t - 50000) / 60000; // puis ça continue de durcir (sans limite de temps)
         // déplacement : joystick ou clavier
         let dx = stick.current.dx, dy = stick.current.dy;
         const k = keys.current;
@@ -139,7 +140,7 @@ export function BelosSpiders({ endsAt, onFinish }: MinigameProps) {
         s.y = Math.max(PR + 6, Math.min(H - PR - 6, s.y));
         // araignées
         s.nextSpider -= dt;
-        if (s.nextSpider <= 0) { spawnSpider(s, d); s.nextSpider = 1150 - 750 * d + Math.random() * 400; }
+        if (s.nextSpider <= 0) { spawnSpider(s, d + more * 0.6); s.nextSpider = Math.max(200, 1150 - 750 * d - 150 * more) + Math.random() * 400; }
         for (const sp of s.spiders) {
           sp.x += sp.vx * dt; sp.y += sp.vy * dt;
           if (sp.webber && s.t - sp.lastWeb > 650 && sp.x > 10 && sp.x < W - 10 && sp.y > 10 && sp.y < H - 10) {

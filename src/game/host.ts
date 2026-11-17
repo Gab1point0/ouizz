@@ -1,7 +1,7 @@
 // Moteur de partie côté animateur : il fait autorité (états, chronos, points).
 // Les téléphones ne font qu'afficher l'état reçu et envoyer leurs réponses.
 
-import { minigameFractions } from '../minigames';
+import { minigameFractions, questionTime } from '../minigames';
 import { zonesOf } from '../zones';
 import { cleanQuestion, isScored, QT } from '../qtypes';
 import { computePoints, grade } from '../scoring';
@@ -346,7 +346,8 @@ export class HostGame {
     if (q.type === 'slide') {
       this.s.phase = 'question';
       this.s.openedAt = Date.now();
-      this.s.endsAt = q.time > 0 ? Date.now() + q.time * 1000 : 0;
+      const time = questionTime(q);
+      this.s.endsAt = time > 0 ? Date.now() + time * 1000 : 0;
       return this.changed();
     }
     const rt = this.s.settings.readTime;
@@ -361,7 +362,8 @@ export class HostGame {
     const q = this.question!;
     this.s.phase = 'question';
     this.s.openedAt = Date.now();
-    this.s.endsAt = q.time > 0 ? Date.now() + q.time * 1000 : 0;
+    const time = questionTime(q);
+    this.s.endsAt = time > 0 ? Date.now() + time * 1000 : 0;
     if (q.type === 'brainstorm') this.s.sub = 'ideas';
     this.changed();
   }
@@ -552,7 +554,7 @@ export class HostGame {
   pubQuestion(q: Question): PubQuestion {
     const sh = this.s.shuf[q.id] ?? {};
     const phonesSee = this.s.settings.showOnPhones;
-    const pq: PubQuestion = { id: q.id, type: q.type, title: phonesSee || q.type === 'slide' ? q.title : '', time: q.time, points: q.points };
+    const pq: PubQuestion = { id: q.id, type: q.type, title: phonesSee || q.type === 'slide' ? q.title : '', time: questionTime(q), points: q.points };
     if (q.type === 'minigame') pq.minigame = q.minigame;
     if (q.media?.kind === 'image' && (phonesSee || QT[q.type].phoneNeedsMedia)) pq.mediaKey = `${q.id}:m`;
     if (q.answers) {

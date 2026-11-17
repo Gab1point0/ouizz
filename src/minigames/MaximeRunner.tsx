@@ -100,7 +100,7 @@ export function MaximeRunner({ endsAt, onFinish }: MinigameProps) {
       if (running) {
         s.t += dt;
         // vitesse : douce au début, accélère avec le temps
-        s.speed = Math.min(0.55, 0.2 + s.t / 120000);
+        s.speed = Math.min(0.78, 0.2 + s.t / 120000); // continue d'accélérer (partie sans limite de temps)
         s.dist += s.speed * dt;
         if (s.y < 0 || s.vy < 0) {
           s.vy += GRAVITY * dt; s.y = Math.min(0, s.y + s.vy * dt);
@@ -119,7 +119,7 @@ export function MaximeRunner({ endsAt, onFinish }: MinigameProps) {
           const canTacos = s.t > 12000 && s.t - s.lastTacos > 9000 - 3000 * d && kind !== 'tacos';
           s.nextKind = canTacos && r < tacosChance ? 'tacos' : s.t > 5000 && r < 0.45 + 0.1 * d ? 'sign' : 'food';
           // écart entre obstacles (en ms) : large au début, plus serré ensuite ; beaucoup d'air autour des tacos
-          let gap = 1300 - 550 * d + Math.random() * (900 - 400 * d);
+          let gap = (1300 - 550 * d + Math.random() * (900 - 400 * d)) * Math.max(0.65, 1 - Math.max(0, s.t - 60000) / 240000);
           if (kind === 'tacos') gap += 1300 - 300 * d;        // après un tacos : on a le temps d'atterrir
           if (s.nextKind === 'tacos') gap += 1100 - 300 * d;  // avant un tacos : piste dégagée
           s.nextIn = gap;
