@@ -79,8 +79,7 @@ const MUSIC: Record<string, MusicDef> = {
 // Chaque ambiance a son fichier ; si un fichier ne se charge pas, on retombe sur la boucle synthétisée ci-dessus.
 export const TRACKS: Record<string, string> = {
   calm: 'attente-calme', party: 'attente-festive', retro: 'attente-retro', suspense: 'attente-suspense', lounge: 'attente-lounge',
-  // pas encore de morceau « réflexion » dédié (quota Gemini atteint) : on réutilise le suspense
-  thinking: 'attente-suspense', podium: 'podium',
+  thinking: 'reflexion', podium: 'podium',
 };
 const trackUrl = (name: string) => `./music/${TRACKS[name] ?? name}.mp3`;
 let track: HTMLAudioElement | null = null;
