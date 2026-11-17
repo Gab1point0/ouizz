@@ -302,3 +302,10 @@ table.results th, table.results td { padding: 6px 8px; border-bottom: 1px solid 
 .hidden-player .stage-video { width: 220px; height: 220px; }
 .media-ctrl { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .video-wrap { display: contents; }
+
+/* glisser-déposer des questions dans l'éditeur */
+.ed-thumb { cursor: grab; transition: opacity .15s, box-shadow .15s; }
+.ed-thumb:active { cursor: grabbing; }
+.ed-thumb.dragging { opacity: .35; }
+.ed-thumb.drop-before { box-shadow: 0 -4px 0 var(--accent); }
+.ed-thumb.drop-after { box-shadow: 0 4px 0 var(--accent); }

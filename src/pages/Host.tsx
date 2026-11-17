@@ -7,7 +7,7 @@ import { MediaView } from '../components/MediaPlayer';
 import { clearSavedGame, HostGame, loadSavedGame, newPin, type HostSnapshot } from '../game/host';
 import { openTransport } from '../net/transport';
 import { isScored, QT, questionProblems } from '../qtypes';
-import { play, setMusicEnabled, setSoundEnabled, setSoundPack, startMusic, stopMusic } from '../sfx';
+import { play, playPodiumJingle, setMusicEnabled, setSoundEnabled, setSoundPack, startMusic, startQuestionMusic, stopMusic } from '../sfx';
 import { getQuiz, saveQuiz, saveReport } from '../storage';
 import { themeStyle } from '../themes';
 import { DEFAULT_SETTINGS, type GameSettings, type Quiz } from '../types';
@@ -135,9 +135,13 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
   }, [game]);
 
   useEffect(() => {
-    if (s.phase === 'lobby') startMusic(game.quiz.style?.music ?? resolveLook(game.quiz.theme).style.music ?? 'calm'); else stopMusic();
+    const qq = game.question;
+    const st = resolveLook(game.quiz.theme, game.quiz.style).style;
+    if (s.phase === 'lobby') startMusic(st.music ?? 'calm');
+    else if (s.phase === 'question' && qq && qq.type !== 'slide' && qq.type !== 'buzzer' && qq.media?.kind !== 'video' && st.questionMusic !== 'none') startQuestionMusic();
+    else if (s.phase !== 'podium') stopMusic();
     if (s.phase === 'podium') {
-      play('podium');
+      playPodiumJingle();
       if (!reportSaved.current) {
         reportSaved.current = true;
         const table = game.resultsTable();
@@ -153,7 +157,7 @@ function GameScreen({ game, onQuit }: { game: HostGame; onQuit: () => void }) {
         });
       }
     }
-  }, [s.phase, game, s.order, s.answers]);
+  }, [s.phase, s.idx, game, s.order, s.answers]);
 
   useEffect(() => { setShowAnswer(false); }, [s.idx]);
 

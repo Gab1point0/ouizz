@@ -75,23 +75,95 @@ const MUSIC: Record<string, MusicDef> = {
   lounge: { step: 420, notes: [349, 440, 523, 659, 392, 494, 587, 698, 330, 415, 494, 622], play: (f, i) => { tone(f, 0.5, { type: 'sine', vol: 0.03, music: true }); if (i % 4 === 0) tone(f / 2, 1.2, { type: 'sine', vol: 0.035, music: true }); } },
 };
 
-export function startMusic(style: string = 'calm') {
-  if (!musicOn || !enabled || musicTimer || style === 'none') return;
+// ---------- vrais morceaux (créés avec Gemini, dans public/music) ----------
+// Chaque ambiance a son fichier ; si un fichier ne se charge pas, on retombe sur la boucle synthétisée ci-dessus.
+export const TRACKS: Record<string, string> = {
+  calm: 'attente-calme', party: 'attente-festive', retro: 'attente-retro', suspense: 'attente-suspense', lounge: 'attente-lounge',
+  // pas encore de morceau « réflexion » dédié (quota Gemini atteint) : on réutilise le suspense
+  thinking: 'attente-suspense', podium: 'podium',
+};
+const trackUrl = (name: string) => `./music/${TRACKS[name] ?? name}.mp3`;
+let track: HTMLAudioElement | null = null;
+let trackName = '';
+
+function fade(a: HTMLAudioElement, to: number, ms: number, then?: () => void) {
+  const from = a.volume;
+  const t0 = performance.now();
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    a.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+    if (k < 1) setTimeout(step, 40); else then?.();
+  };
+  step();
+}
+
+function playTrack(name: string, opts: { loop: boolean; vol: number; fallback?: () => void }) {
+  stopTrack(0);
+  const a = new Audio(trackUrl(name));
+  a.loop = opts.loop;
+  a.volume = 0;
+  track = a;
+  trackName = name;
+  let failed = false;
+  const fail = () => { if (failed || track !== a) return; failed = true; track = null; trackName = ''; opts.fallback?.(); };
+  a.addEventListener('error', fail);
+  a.play().then(() => fade(a, opts.vol, 800)).catch(fail);
+}
+
+function stopTrack(ms = 600) {
+  const a = track;
+  track = null;
+  trackName = '';
+  if (!a) return;
+  if (!ms) { a.pause(); return; }
+  fade(a, 0, ms, () => a.pause());
+}
+
+function startSynth(style: string) {
+  if (musicTimer) return;
   const m = MUSIC[style] ?? MUSIC.calm;
   let i = 0;
   const step = () => { m.play(m.notes[i % m.notes.length], i); i++; };
   step();
   musicTimer = window.setInterval(step, m.step);
 }
-export function stopMusic() { clearInterval(musicTimer); musicTimer = 0; }
-export function setMusicEnabled(v: boolean) { musicOn = v; if (!v) stopMusic(); }
-/** Petit aperçu (éditeur) */
-export function previewMusic(style: string) {
+
+/** Musique de la salle d'attente (en boucle). */
+export function startMusic(style: string = 'calm') {
+  if (!musicOn || !enabled || style === 'none') return;
+  if (trackName === style || musicTimer) return;
   stopMusic();
+  playTrack(style, { loop: true, vol: 0.45, fallback: () => startSynth(style) });
+}
+
+/** Musique de réflexion pendant les questions (discrète). */
+export function startQuestionMusic() {
+  if (!musicOn || !enabled) return;
+  if (trackName === 'thinking') return;
+  stopMusic();
+  playTrack('thinking', { loop: true, vol: 0.28 });
+}
+
+/** Petit air de victoire au podium. */
+export function playPodiumJingle() {
+  if (!enabled || pack === 'none') return;
+  stopMusic();
+  playTrack('podium', { loop: false, vol: 0.6, fallback: () => SOUNDS.podium() });
+}
+
+export function stopMusic(ms = 600) { clearInterval(musicTimer); musicTimer = 0; stopTrack(ms); }
+export function setMusicEnabled(v: boolean) { musicOn = v; if (!v) stopMusic(); }
+
+/** Petit aperçu (éditeur) : 8 secondes */
+let previewTimer = 0;
+export function previewMusic(style: string) {
+  clearTimeout(previewTimer);
+  stopMusic(0);
   const was = musicOn; musicOn = true;
-  startMusic(style);
-  musicOn = was;
-  setTimeout(stopMusic, 3500);
+  const wasOn = enabled; enabled = true;
+  if (style === 'thinking') startQuestionMusic(); else if (style === 'podium') playPodiumJingle(); else startMusic(style);
+  musicOn = was; enabled = wasOn;
+  previewTimer = window.setTimeout(() => stopMusic(), 8000);
 }
 export function previewSounds(p: string) {
   const old = pack; pack = p as Pack;

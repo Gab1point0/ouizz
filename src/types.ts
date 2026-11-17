@@ -168,6 +168,8 @@ export interface QuizStyle {
   // ambiance sonore
   music?: 'calm' | 'party' | 'retro' | 'suspense' | 'lounge' | 'none';
   soundPack?: 'classic' | 'retro' | 'soft' | 'none';
+  /** musique de réflexion pendant les questions */
+  questionMusic?: 'thinking' | 'none';
   // identité
   logo?: string;
   lobbyMessage?: string;

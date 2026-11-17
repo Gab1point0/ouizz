@@ -386,6 +386,17 @@ function SoundTab({ eff, set }: { eff: QuizStyle; set: (p: Partial<QuizStyle>) =
           </div>
         ))}
       </div>
+      <div className="small muted" style={{ fontWeight: 700 }}>Pendant les questions</div>
+      <div className="choice-grid">
+        {([['thinking', 'Musique de réflexion'], ['none', 'Silence']] as const).map(([id, label]) => (
+          <div key={id} className={`type-btn ${(eff.questionMusic ?? 'thinking') === id ? 'active' : ''}`} onClick={() => set({ questionMusic: id })} role="button">
+            <span className="grow">{label}</span>
+            {id !== 'none' && <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); previewMusic('thinking'); }} title="Écouter">▶</button>}
+          </div>
+        ))}
+        <div className="type-btn" role="button" onClick={() => previewMusic('podium')}><span className="grow">Jingle du podium</span><span className="btn btn-sm btn-ghost">▶</span></div>
+      </div>
+      <div className="small muted">Pas de musique de réflexion sur les questions avec vidéo (blind test) ni au buzzer.</div>
       <div className="small muted" style={{ fontWeight: 700 }}>Bruitages</div>
       <div className="choice-grid">
         {SOUND_PACKS.map((m) => (
@@ -395,7 +406,7 @@ function SoundTab({ eff, set }: { eff: QuizStyle; set: (p: Partial<QuizStyle>) =
           </div>
         ))}
       </div>
-      <div className="small muted">Les sons et la musique peuvent aussi être coupés au lancement de chaque partie.</div>
+      <div className="small muted">Musiques créées avec Gemini (filigrane audio SynthID). Les sons et la musique peuvent aussi être coupés au lancement de chaque partie.</div>
     </>
   );
 }

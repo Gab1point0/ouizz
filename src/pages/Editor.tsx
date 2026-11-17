@@ -16,6 +16,9 @@ export function EditorPage({ quizId }: { quizId: string }) {
   const [saved, setSaved] = useState(true);
   const [adding, setAdding] = useState(false);
   const [lookOpen, setLookOpen] = useState(false);
+  // glisser-déposer des questions dans la liste de gauche
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dropAt, setDropAt] = useState<number | null>(null);
   const timer = useRef(0);
 
   useEffect(() => { getQuiz(quizId).then((q) => setQuiz(q ?? null)); }, [quizId]);
@@ -89,7 +92,12 @@ export function EditorPage({ quizId }: { quizId: string }) {
           {quiz.questions.map((x, i) => {
             const pb = questionProblems(x);
             return (
-              <div key={x.id} className={`ed-thumb ${i === sel ? 'active' : ''}`} onClick={() => setSel(i)}>
+              <div key={x.id} className={`ed-thumb ${i === sel ? 'active' : ''} ${dragFrom === i ? 'dragging' : ''} ${dropAt === i && dragFrom !== null && dragFrom !== i ? (dragFrom < i ? 'drop-after' : 'drop-before') : ''}`}
+                onClick={() => setSel(i)} draggable title="Glisser pour déplacer"
+                onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); }}
+                onDragOver={(e) => { if (dragFrom === null) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dropAt !== i) setDropAt(i); }}
+                onDrop={(e) => { e.preventDefault(); if (dragFrom !== null && dragFrom !== i) move(dragFrom, i); setDragFrom(null); setDropAt(null); }}
+                onDragEnd={() => { setDragFrom(null); setDropAt(null); }}>
                 <span className="n">{i + 1}</span>
                 <span style={{ fontSize: '1.3em' }}>{QT[x.type].icon}</span>
                 <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
