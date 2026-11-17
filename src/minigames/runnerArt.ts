@@ -92,25 +92,59 @@ function drumstick(c: C) {
   c.fillStyle = 'rgba(120,60,20,.55)'; for (let i = 0; i < 10; i++) { c.beginPath(); c.arc(20 + rnd(i) * 22, 15 + rnd(i + 9) * 16, 1.2, 0, 7); c.fill(); }
   shine(c, 25, 16, 5, 2.5, 0.35);
 }
-function tacosStack(c: C) {
-  // drapeau sur cure-dent
-  c.strokeStyle = '#a0742f'; c.lineWidth = 2; c.beginPath(); c.moveTo(27, 2); c.lineTo(27, 22); c.stroke();
-  c.beginPath(); c.moveTo(27, 3); c.lineTo(45, 7); c.lineTo(27, 11); c.closePath(); fillStroke(c, '#2a9d4b', 1.4);
-  for (let i = 2; i >= 0; i--) {
-    const cy = 82 - i * 27; // centre de chaque taco
-    const cx = 27 + (i % 2 ? 3 : -2);
-    // garniture qui dépasse
-    c.beginPath(); c.ellipse(cx, cy - 6, 20, 8, 0, Math.PI, 0); fillStroke(c, '#5cbf4a', 1.6);
-    c.fillStyle = '#7a3e1d'; c.beginPath(); c.ellipse(cx, cy - 4, 17, 5, 0, Math.PI, 0); c.fill();
-    c.fillStyle = '#e5423b'; for (const dx of [-10, -2, 7, 13]) { c.beginPath(); c.arc(cx + dx, cy - 9 + (dx % 3), 2.3, 0, 7); c.fill(); }
-    c.fillStyle = '#ffd23f'; for (const dx of [-6, 3, 10]) c.fillRect(cx + dx, cy - 12, 1.6, 6);
-    // coque de maïs
-    c.beginPath(); c.moveTo(cx - 23, cy - 6); c.bezierCurveTo(cx - 22, cy + 16, cx + 22, cy + 16, cx + 23, cy - 6); c.closePath();
-    const g = c.createLinearGradient(0, cy - 6, 0, cy + 12); g.addColorStop(0, '#ffd56b'); g.addColorStop(1, '#e8a43a');
-    fillStroke(c, g);
-    c.fillStyle = 'rgba(190,120,40,.45)'; for (let k = 0; k < 6; k++) { c.beginPath(); c.arc(cx - 15 + rnd(k + i * 7) * 30, cy + rnd(k + 40 + i) * 8, 1.4, 0, 7); c.fill(); }
-    shine(c, cx - 11, cy + 1, 5, 2, 0.35);
+/** Tacos français : galette de blé pliée en carré et grillée (marques de grill), coupée en haut :
+ *  on voit les frites, la viande et la sauce fromagère qui coule. Emballage papier en bas. */
+function frenchTacos(c: C) {
+  const x = 6, y = 14, w = 52, h = 64;
+  // galette grillée
+  const g = c.createLinearGradient(x, 0, x + w, 0);
+  g.addColorStop(0, '#d9a04e'); g.addColorStop(0.5, '#f0c06c'); g.addColorStop(1, '#c98a35');
+  rr(c, x, y, w, h, 7); fillStroke(c, g, 2.4);
+  // marques de grill (panini) en diagonale
+  c.save(); rr(c, x + 1, y + 1, w - 2, h - 2, 6); c.clip();
+  // marques de grill parallèles (presse à panini), légèrement en biais
+  c.lineCap = 'round';
+  for (let k = 0; k < 6; k++) {
+    const yy = y + 10 + k * 10;
+    c.strokeStyle = 'rgba(115,58,18,.6)'; c.lineWidth = 3.4;
+    c.beginPath(); c.moveTo(x + 3, yy + 6); c.lineTo(x + w - 3, yy - 2); c.stroke();
+    c.strokeStyle = 'rgba(255,230,170,.35)'; c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(x + 3, yy + 9); c.lineTo(x + w - 3, yy + 1); c.stroke();
   }
+  // pli de la galette (rabat)
+  c.strokeStyle = 'rgba(110,60,20,.6)'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(x + 4, y + h * 0.55); c.quadraticCurveTo(x + w / 2, y + h * 0.48, x + w - 4, y + h * 0.55); c.stroke();
+  c.restore();
+  // coupe en haut : garniture
+  c.beginPath(); c.ellipse(x + w / 2, y + 2, w / 2 - 1, 7, 0, 0, 7); fillStroke(c, '#f6e7c4', 2);
+  // frites qui dépassent
+  for (const [fx, fh, a] of [[14, 16, -0.25], [21, 20, 0.05], [28, 15, 0.3], [35, 19, -0.1], [43, 14, 0.35], [49, 12, -0.3]] as const) {
+    c.save(); c.translate(fx, y + 2); c.rotate(a);
+    rr(c, -2.4, -fh, 4.8, fh, 2); fillStroke(c, '#ffd23f', 1.4);
+    c.fillStyle = '#e8a317'; c.fillRect(-1.4, -fh + 1, 2.8, 2);
+    c.restore();
+  }
+  // viande
+  c.fillStyle = '#7a3e1d';
+  for (const [mx, my] of [[18, 1], [27, 3], [37, 0], [45, 3]]) { c.beginPath(); c.ellipse(mx, y + my, 4.5, 3, 0.3, 0, 7); c.fill(); }
+  // sauce fromagère qui coule sur les côtés
+  c.fillStyle = '#ffe9a8'; c.strokeStyle = '#d9b44a'; c.lineWidth = 1.2;
+  c.beginPath(); c.moveTo(x + 3, y + 1);
+  c.quadraticCurveTo(x + 10, y + 7, x + 12, y + 3);
+  c.quadraticCurveTo(x + 15, y + 15, x + 18, y + 4);
+  c.quadraticCurveTo(x + 30, y + 9, x + 36, y + 4);
+  c.quadraticCurveTo(x + 39, y + 19, x + 42, y + 5);
+  c.quadraticCurveTo(x + 47, y + 9, x + w - 3, y + 1);
+  c.quadraticCurveTo(x + w / 2, y - 4, x + 3, y + 1);
+  c.fill(); c.stroke();
+  // emballage papier en bas
+  const py = y + h - 22;
+  c.beginPath(); c.moveTo(x - 3, py); c.lineTo(x + w + 3, py); c.lineTo(x + w, y + h + 6); c.lineTo(x, y + h + 6); c.closePath();
+  fillStroke(c, '#fbf6ec', 2.2);
+  c.fillStyle = '#d62828'; c.fillRect(x - 1, py + 4, w + 2, 4);
+  c.fillStyle = '#d62828'; c.font = '900 11px "Arial Black", Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('TACOS', x + w / 2, py + 17);
+  shine(c, x + 10, y + 22, 3, 9, 0.25);
 }
 
 // ---------------------------------------------------------------- enseignes (en hauteur : se baisser)
@@ -162,7 +196,7 @@ export interface RunnerSprites { foods: Sprite[]; tacos: Sprite; signs: Sprite[]
 export function makeRunnerSprites(dpr: number): RunnerSprites {
   return {
     foods: [sprite(48, 44, dpr, burger), sprite(42, 48, dpr, fries), sprite(48, 38, dpr, pizza), sprite(42, 32, dpr, donut), sprite(48, 36, dpr, drumstick)],
-    tacos: sprite(52, 96, dpr, tacosStack),
+    tacos: sprite(64, 86, dpr, frenchTacos),
     signs: [sprite(SIGN_W, SIGN_H, dpr, signMcdo), sprite(SIGN_W, SIGN_H, dpr, signBk), sprite(SIGN_W, SIGN_H, dpr, signKfc), sprite(SIGN_W, SIGN_H, dpr, signSubway)],
   };
 }

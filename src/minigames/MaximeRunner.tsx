@@ -1,6 +1,6 @@
 // « Maxime pendant l'ellipse » : course sans fin (inspirée du petit jeu de repos de Road2Fit).
 // - burgers, frites, pizzas… au sol : SAUTER
-// - pile de tacos (plus haute qu'un saut) : DOUBLE SAUT
+// - tacos français (plus haut qu'un saut) : DOUBLE SAUT — rare, annoncé, avec de la place avant et après
 // - enseignes de fast-food suspendues : SE BAISSER
 // Plus on court (score), plus Maxime maigrit. 3 vies ; la partie s'arrête à 0 vie ou à la fin du temps.
 import { useEffect, useRef, useState } from 'react';
@@ -13,7 +13,7 @@ const GROUND = 318;
 const PX = 64; // position horizontale du joueur
 const GRAVITY = 0.0028;
 const JUMP_V = -0.64; // un saut ≈ 73 px
-const TACO_H = 88; // plus haut qu'un saut simple → double saut
+const TACO_H = 80; // un peu plus haut qu'un saut simple (≈ 73 px) → double saut
 const SIGN_BOTTOM = GROUND - 54; // bas de l'enseigne : debout (74 px) on la prend, baissé (44 px) on passe
 const COUNTDOWN = 3000;
 const SAFETY = 700;
@@ -24,8 +24,8 @@ const N_SIGNS = 4;
 
 type Obs = { kind: 'food' | 'tacos' | 'sign'; x: number; w: number; v: number };
 interface Dust { x: number; y: number; t: number }
-interface St { dust: Dust[]; t: number; dist: number; speed: number; y: number; vy: number; duck: boolean; doubled: boolean; obs: Obs[]; nextIn: number; lives: number; inv: number; over: boolean; pops: { text: string; t: number }[]; lastStage: number }
-const fresh = (): St => ({ dust: [], t: 0, dist: 0, speed: 0.24, y: 0, vy: 0, duck: false, doubled: false, obs: [], nextIn: 1200, lives: 3, inv: 0, over: false, pops: [], lastStage: 0 });
+interface St { lastTacos: number; nextKind: 'food' | 'sign' | 'tacos'; dust: Dust[]; t: number; dist: number; speed: number; y: number; vy: number; duck: boolean; doubled: boolean; obs: Obs[]; nextIn: number; lives: number; inv: number; over: boolean; pops: { text: string; t: number }[]; lastStage: number }
+const fresh = (): St => ({ lastTacos: -99999, nextKind: 'food', dust: [], t: 0, dist: 0, speed: 0.24, y: 0, vy: 0, duck: false, doubled: false, obs: [], nextIn: 1200, lives: 3, inv: 0, over: false, pops: [], lastStage: 0 });
 
 export function MaximeRunner({ endsAt, onFinish }: MinigameProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -85,7 +85,7 @@ export function MaximeRunner({ endsAt, onFinish }: MinigameProps) {
       const left = PX - box.hw, right = PX + box.hw + 6;
       if (right < o.x + 6 || left > o.x + o.w - 6) return false;
       if (o.kind === 'food') return bottom > GROUND - (sp.foods[o.v % N_FOODS].h - 10);
-      if (o.kind === 'tacos') return bottom > GROUND - TACO_H + 8;
+      if (o.kind === 'tacos') return bottom > GROUND - TACO_H + 2; // un saut simple (73 px) ne suffit pas
       return top < SIGN_BOTTOM - 3;
     };
 
@@ -99,7 +99,8 @@ export function MaximeRunner({ endsAt, onFinish }: MinigameProps) {
       if (running && phase !== 'run') setPhase('run');
       if (running) {
         s.t += dt;
-        s.speed = Math.min(0.6, 0.24 + s.t / 80000);
+        // vitesse : douce au début, accélère avec le temps
+        s.speed = Math.min(0.55, 0.2 + s.t / 120000);
         s.dist += s.speed * dt;
         if (s.y < 0 || s.vy < 0) {
           s.vy += GRAVITY * dt; s.y = Math.min(0, s.y + s.vy * dt);
@@ -107,12 +108,21 @@ export function MaximeRunner({ endsAt, onFinish }: MinigameProps) {
         }
         s.nextIn -= dt;
         if (s.nextIn <= 0) {
-          const r = Math.random();
-          const tacos = s.t > 6000 && r < 0.2;
-          const sign = !tacos && s.t > 3000 && r < 0.5;
+          const kind = s.nextKind;
           const v = Math.floor(Math.random() * 20);
-          s.obs.push(tacos ? { kind: 'tacos', x: W + 10, w: sp.tacos.w, v: 0 } : sign ? { kind: 'sign', x: W + 10, w: sp.signs[0].w, v } : { kind: 'food', x: W + 10, w: foodW(v), v });
-          s.nextIn = 700 + (tacos ? 450 : 0) + Math.random() * 900 * (0.3 / s.speed);
+          s.obs.push(kind === 'tacos' ? { kind: 'tacos', x: W + 10, w: sp.tacos.w, v: 0 } : kind === 'sign' ? { kind: 'sign', x: W + 10, w: sp.signs[0].w, v } : { kind: 'food', x: W + 10, w: foodW(v), v });
+          if (kind === 'tacos') s.lastTacos = s.t;
+          // prochain obstacle : choisi d'avance pour laisser de la place AVANT un tacos
+          const d = Math.min(1, s.t / 60000); // 0 → 1 : la difficulté monte sur une minute
+          const r = Math.random();
+          const tacosChance = 0.06 + 0.1 * d;
+          const canTacos = s.t > 12000 && s.t - s.lastTacos > 9000 - 3000 * d && kind !== 'tacos';
+          s.nextKind = canTacos && r < tacosChance ? 'tacos' : s.t > 5000 && r < 0.45 + 0.1 * d ? 'sign' : 'food';
+          // écart entre obstacles (en ms) : large au début, plus serré ensuite ; beaucoup d'air autour des tacos
+          let gap = 1300 - 550 * d + Math.random() * (900 - 400 * d);
+          if (kind === 'tacos') gap += 1300 - 300 * d;        // après un tacos : on a le temps d'atterrir
+          if (s.nextKind === 'tacos') gap += 1100 - 300 * d;  // avant un tacos : piste dégagée
+          s.nextIn = gap;
         }
         s.obs.forEach((o) => { o.x -= s.speed * dt; });
         s.obs = s.obs.filter((o) => o.x + o.w > -10);
@@ -144,6 +154,16 @@ export function MaximeRunner({ endsAt, onFinish }: MinigameProps) {
       const blink = s.inv > wall && Math.floor(wall / 90) % 2 === 1;
       if (!blink) drawMaxime(ctx, PX, GROUND + s.y, { fat: f, t: s.t, air: s.y < 0, duck: s.duck, vy: s.vy });
       if (s.inv > wall && !blink) { ctx.fillStyle = 'rgba(255,60,60,.12)'; ctx.fillRect(0, 0, W, H); }
+      // annonce : un tacos arrive → double saut
+      const tc = s.obs.find((o) => o.kind === 'tacos' && o.x > PX && o.x - PX < 260);
+      if (tc && !s.over) {
+        const a = Math.min(1, (260 - (tc.x - PX)) / 60);
+        ctx.save(); ctx.globalAlpha = a;
+        ctx.font = '900 20px "Arial Black", Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = 6; ctx.strokeStyle = '#fff'; ctx.strokeText('⬆⬆ DOUBLE SAUT !', W / 2, 40);
+        ctx.fillStyle = '#d62828'; ctx.fillText('⬆⬆ DOUBLE SAUT !', W / 2, 40);
+        ctx.restore();
+      }
       // messages « −5 kg ! »
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
       s.pops = s.pops.filter((p) => wall - p.t < 1300);
